@@ -40,6 +40,7 @@ from domogikmq.pubsub.subscriber import MQAsyncSub
 from domogikmq.message import MQMessage
 from domogik.common.plugin import STATUS_ALIVE, STATUS_STOPPED
 import json
+import time
 
 class TestPlugin(MQAsyncSub):
     """ Handle some actions on the plugins to test them
@@ -55,6 +56,8 @@ class TestPlugin(MQAsyncSub):
         self.type = "plugin"
         self.plugin_status = None
         self.count = 0
+        self._timeout = 0
+        self._IOLoopTimeout = None
         MQAsyncSub.__init__(self, zmq.Context(), 'test', ['plugin.status'])
 
     def request_startup(self, timeout=10):
@@ -122,9 +125,11 @@ class TestPlugin(MQAsyncSub):
             If no status has been catched before the timeout, raise an error
         """
         self.count = 0
-        print(u"Start listening to MQ for event {0} With timeout {1} sec ...".format(event, timeout))
-        IOLoop.instance().start()
+        self._timeout = timeout
+        print(u"Start listening to MQ for event {0} With timeout {1} sec ...".format(event, self._timeout))
         # TODO : handle timeout
+        self._IOLoopTimeout = IOLoop.add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
+        IOLoop.instance().start()
 
         # the following line will be processed when a IOLoop.instance().stop() will be called
         if self.plugin_status == event:
@@ -151,6 +156,9 @@ class TestPlugin(MQAsyncSub):
             if content['name'] == self.name and \
                content['type'] == self.type and \
                content['host'] == self.host:
+                IOLoop.remove_timeout(self._IOLoopTimeout)
+                self._IOLoopTimeout = None
+
                 self.plugin_status = content['event']
                 # plugin started
                 if content['event'] == STATUS_ALIVE:
@@ -163,5 +171,8 @@ class TestPlugin(MQAsyncSub):
                     print(u"Plugin is stopped")
                     print(u"Stop listening to MQ as we get our result")
                     IOLoop.instance().stop()
+            elif self._IOLoopTimeout is None :
+                print(u"Restart timeout waiting to MQ for event.")
+                self._IOLoopTimeout = IOLoop.add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
 
 
