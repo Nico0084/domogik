@@ -128,7 +128,7 @@ class TestPlugin(MQAsyncSub):
         self._timeout = timeout
         print(u"Start listening to MQ for event {0} With timeout {1} sec ...".format(event, self._timeout))
         # TODO : handle timeout
-        self._IOLoopTimeout = IOLoop.add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
+        self._IOLoopTimeout = IOLoop.instance().add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
         IOLoop.instance().start()
 
         # the following line will be processed when a IOLoop.instance().stop() will be called
@@ -173,6 +173,6 @@ class TestPlugin(MQAsyncSub):
                     IOLoop.instance().stop()
             elif self._IOLoopTimeout is None :
                 print(u"Restart timeout waiting to MQ for event.")
-                self._IOLoopTimeout = IOLoop.add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
+                self._IOLoopTimeout = IOLoop.instance().add_timeout(time.time() + self._timeout, IOLoop.instance().stop())
 
 
