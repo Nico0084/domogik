@@ -38,7 +38,6 @@ import datetime
 from threading import Event
 from domogik.xpl.common.xplconnector import Listener
 from domogik.xpl.common.xplmessage import XplMessage
-from domogik.xpl.common.plugin import XplPlugin
 from domogik.tests.common.helpers import *
 from domogikmq.pubsub.subscriber import MQSyncSub
 from domogikmq.message import MQMessage
@@ -58,8 +57,12 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
         """ sort of a Constructor
         """
         print(u"\n------------------------------------------------------------------")
+        self.myxpl = None
         #self.config = {}
 
+    def isXplPlugin(self):
+        """Check if plugin tested use xPL or not"""
+        return False if self.myxpl is None else True
 
     ### MQ tools
 
@@ -80,15 +83,15 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
             device_list = result.get_data()['devices']
 
         for dev in device_list:
-            if dev['id'] == device_id: 
+            if dev['id'] == device_id:
                 device = dev
 
         # we add 5% to the timeout as some operations may be done in the plugin and so the interval is not totally exact
-        timeout = timeout*1.05 
+        timeout = timeout*1.05
 
         # Bacause of the TestPlugin component, we can't use the MQAsyncSub class here...
         # So we will do a manual loop thanks to MQSyncSub
-        # To avoid eternal waiting for a not send message, we catch also the plugin.status messages that occurs each 
+        # To avoid eternal waiting for a not send message, we catch also the plugin.status messages that occurs each
         # 15s but we don't process them
 
         do_loop = True
@@ -128,8 +131,8 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
                 #print(time.time() - time_start)
                 if (time.time() - time_start) > timeout:
                     raise RuntimeError("No MQ message received before the timeout reached")
-                    
- 
+
+
 
 
         return False
@@ -148,28 +151,29 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
             @param data : the list of keys/values we should find in the message. { 'key1' : 'val1', ... }
             @param timeout : time (in seconds) given to get the message. Once timeout has expired, we return False
         """
+        if self.isXplPlugin():
+            # create the listener to catch the message
+            self._xpl_received = Event()
+            criteria = {'schema': xplschema,
+                        'xpltype': xpltype,
+                        'xplsource': xplsource}
+            for key in data:
+                criteria[key] = str(data[key])
+            listener = Listener(self._wait_for_xpl_cb,
+                                self.myxpl,
+                                criteria)
 
-        # create the listener to catch the message
-        self._xpl_received = Event()
-        criteria = {'schema': xplschema,
-                    'xpltype': xpltype,
-                    'xplsource': xplsource}
-        for key in data:
-            criteria[key] = str(data[key])
-        listener = Listener(self._wait_for_xpl_cb, 
-                            self.myxpl, 
-                            criteria)
-
-        # we add 5% to the timeout as some operations may be done in the plugin and so the interval is not totally exact
-        timeout = timeout*1.05 
-        self._xpl_received.wait(timeout)
-        if not self._xpl_received.is_set():
-            raise RuntimeError("No xPL message received")
-        print(u"xPL message received : {0}".format(self.xpl_data))
-        # remove the listener
-        listener.unregister()
-        return True
-       
+            # we add 5% to the timeout as some operations may be done in the plugin and so the interval is not totally exact
+            timeout = timeout*1.05
+            self._xpl_received.wait(timeout)
+            if not self._xpl_received.is_set():
+                raise RuntimeError("No xPL message received")
+            print(u"xPL message received : {0}".format(self.xpl_data))
+            # remove the listener
+            listener.unregister()
+            return True
+        else :
+            raise RuntimeError(u"Plugin don't use xPL message, can't use wait_for_xpl")
 
 
     def _wait_for_xpl_cb(self, message):
@@ -178,7 +182,7 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
         """
         self._xpl_received.set()
         self.xpl_data = message
-    
+
 
     ### time tools
 

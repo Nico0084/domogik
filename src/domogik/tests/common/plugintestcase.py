@@ -35,6 +35,7 @@ Usage
 """
 
 from domogik.common.utils import get_sanitized_hostname
+from domogik.xpl.common.plugin import XplPlugin
 from domogik.tests.common.templatetestcase import TemplateTestCase
 from domogik.tests.common.helpers import check_domogik_is_running
 from domogik.tests.common.helpers import delete_configuration
@@ -49,17 +50,17 @@ class PluginTestCase(TemplateTestCase):
     """
 
     # this function is the same for all plugins
-    def __init__(self, testname, xpl_plugin, name, configuration):
+    def __init__(self, testname, plugin, name, configuration):
         """ Constructor
             @param testname : used by unittest to choose the test to launch
-            @param xpl_plugin : an instance of XplPlugin to allow to use xPL features 
+            @param plugin : an instance of XplPlugin to allow to use xPL features or instance of Plugin for non xPL
             @param name : name of the plugin we are testing
             @param configuration : dict containing the plugin configuration
         """
         #super(PluginTestCase, self).__init__(testname)
         super(PluginTestCase, self).__init__(testname)
         #TemplateTestCase.__init__(self)
-        self.myxpl = xpl_plugin.myxpl
+        self.myxpl = plugin.myxpl if isinstance(plugin, XplPlugin) else None
         self.name = name
         self.configuration = configuration
 
@@ -85,26 +86,37 @@ class PluginTestCase(TemplateTestCase):
 
     # this function is the same for all plugins
     def test_0050_start_the_plugin(self):
+        if 'timeout' in self.configuration : timeout = self.configuration['timeout']
+        else : timeout = 10
+        print(u"Start plugin {0} (timeout: {1})".format(self.name, timeout))
         tp = TestPlugin(self.name, get_sanitized_hostname())
-        self.assertTrue(tp.request_startup())
+        tp.request_startup(timeout)
+#        self.assertTrue(tp.request_startup(timeout))
         self.assertTrue(tp.wait_for_event(STATUS_ALIVE))
         # just wait 1 second to get clearer logs
+        print (u"Sleep for {0} s.".format(5))
         time.sleep(5)
 
     # this function is the same for all plugins
     def test_9900_hbeat(self):
-        print(u"Check that a heartbeat is sent. This could take up to 5 minutes.")
-        self.assertTrue(self.wait_for_xpl(xpltype = "xpl-stat", 
-                                          xplschema = "hbeat.app", 
+        if self.isXplPlugin():
+            print(u"Check that a heartbeat is sent. This could take up to 5 minutes.")
+            self.assertTrue(self.wait_for_xpl(xpltype = "xpl-stat",
+                                              xplschema = "hbeat.app",
                                           xplsource = "domogik-{0}.{1}".format(self.name, get_sanitized_hostname()),
                                           timeout = 600))
-    
+        else :
+            print(u"Non xPL plugin, can't process xPL hbeat test.")
+
     # this function is the same for all plugins
     def test_9990_stop_the_plugin(self):
+        if 'timeout' in self.configuration : timeout = self.configuration['timeout']
+        else : timeout = 10
+        print(u"Stop plugin {0} (timeout: {1})".format(self.name, timeout))
         tp = TestPlugin(self.name, get_sanitized_hostname())
-        tp.request_stop()
+        tp.request_stop(timeout)
         self.assertTrue(tp.wait_for_event(STATUS_STOPPED))
-    
+
     def configure(self):
         raise NotImplementedError
 

@@ -89,15 +89,14 @@ class TestDevice():
         response = requests.post(url, \
             headers={'content-type':'application/x-www-form-urlencoded'}, \
             data="params={0}".format(json.dumps(params)))
-        
+
         #print(u"Response : [{0}]".format(response.status_code))
-        print(u"Response : [{0}] {1}".format(response.status_code, response.text))
+        print(u"Response : [{0}] {1}".format(response.status_code, response))
         if response.status_code != 201:
             raise RuntimeError("Error when creating the device : {0}".format(response.text))
         else:
-            dev = json.loads(response.text)
-            print(u"The new device is: {0}".format(dev))
-            return dev
+            print(u"The new device is created")
+            return True
 
     def del_device(self, id):
         """ Call DELETE /device/... to delete a device
@@ -135,8 +134,8 @@ class TestDevice():
             #print(u"Id = {0} / Client_id = {1}".format(device['id'], device['client_id']))
             if device['client_id'] == client_id:
                 self.del_device(device['id'])
-        
-        
+
+
 
 
 if __name__ == "__main__":
