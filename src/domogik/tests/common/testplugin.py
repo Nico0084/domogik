@@ -57,7 +57,7 @@ class TestPlugin(MQAsyncSub):
         self.count = 0
         MQAsyncSub.__init__(self, zmq.Context(), 'test', ['plugin.status'])
 
-    def request_startup(self):
+    def request_startup(self, timeout=10):
         """ Request the plugin to start over the manager
         """
         print(u"Request plugin startup to the manager for '{0}' on '{1}'".format(self.name, self.host))
@@ -67,7 +67,8 @@ class TestPlugin(MQAsyncSub):
         msg.add_data('type', "plugin")
         msg.add_data('name', self.name)
         msg.add_data('host', self.host)
-        result = cli.request('manager', msg.get(), timeout=10) 
+        result = cli.request('manager', msg.get(), timeout)
+        print(u"Result start: {0}".format(result))
         if result:
             msgid, content = result.get()
             content = json.loads(content)
@@ -79,9 +80,10 @@ class TestPlugin(MQAsyncSub):
                 print(u"Error : plugin not started")
                 return False
         else:
-            raise RuntimeError("MQ Timeout when requesting manager to start the plugin")
+            print(u"MQ Timeout when requesting manager to start the plugin")
+#            raise RuntimeError("MQ Timeout when requesting manager to start the plugin")
 
-    def request_stop(self):
+    def request_stop(self, timeout=10):
         """ Request the plugin to stop
         """
         print(u"Request plugin to stop : '{0}' on '{1}'".format(self.name, self.host))
@@ -91,11 +93,12 @@ class TestPlugin(MQAsyncSub):
         msg.add_data('type', "plugin")
         msg.add_data('name', self.name)
         msg.add_data('host', self.host)
-        result = cli.request("plugin-{0}.{1}".format(self.name, self.host), msg.get(), timeout=10) 
+        result = cli.request("plugin-{0}.{1}".format(self.name, self.host), msg.get(), timeout)
+        print(u"Result stop: {0}".format(result))
         return True
         # TODO : reactivate this code
         # for a unknown reason, the timeout is always reached even if we can see the plugin.stop.result in the MQ logs
-        # so as this feature is a blocking point to allow packages tests, for now we comment the check on this part 
+        # so as this feature is a blocking point to allow packages tests, for now we comment the check on this part
         # and assume the plugin has responded to the plugin.stop.do response.
         # The real check is done in wait_for_event() by catching the stop event
         #if result:
@@ -119,8 +122,8 @@ class TestPlugin(MQAsyncSub):
             If no status has been catched before the timeout, raise an error
         """
         self.count = 0
-        print(u"Start listening to MQ...")
-        IOLoop.instance().start() 
+        print(u"Start listening to MQ for event {0} With timeout {1} sec ...".format(event, timeout))
+        IOLoop.instance().start()
         # TODO : handle timeout
 
         # the following line will be processed when a IOLoop.instance().stop() will be called
@@ -142,7 +145,7 @@ class TestPlugin(MQAsyncSub):
             if self.count == 0:
                 print(u"Message skipped (we skip the first one) : msgid={0}, content={1}".format(msgid, content))
                 self.count = 1
-                return 
+                return
 
             print(u"Message received : msgid={0}, content={1}".format(msgid, content))
             if content['name'] == self.name and \
@@ -153,12 +156,12 @@ class TestPlugin(MQAsyncSub):
                 if content['event'] == STATUS_ALIVE:
                     print(u"Plugin is started")
                     print(u"Stop listening to MQ as we get our result")
-                    IOLoop.instance().stop() 
-    
+                    IOLoop.instance().stop()
+
                 # plugin stopped
                 elif content['event'] == STATUS_STOPPED:
                     print(u"Plugin is stopped")
                     print(u"Stop listening to MQ as we get our result")
-                    IOLoop.instance().stop() 
-         
+                    IOLoop.instance().stop()
+
 
