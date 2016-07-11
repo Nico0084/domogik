@@ -1198,21 +1198,21 @@ class Plugin(GenericComponent, MQAsyncSub):
             test_args = "-T {0}".format(test_option)
 
         ### Try to start the plugin
-#        Thread(None,
-#                  self._exec_start_plugin,
-#                  "check_check_available_packages",
-#                  (),
-#                  {'test_args': test_args}).start()
+        Thread(None,
+                  self._exec_start_plugin,
+                  "check_check_available_packages",
+                  (),
+                  {'test_args': test_args}).start()
 
-        self.log.info(u"Request to start plugin : {0} {1}".format(self.name, test_args))
-        pid = self.exec_component(py_file = "{0}/plugin_{1}/bin/{2}.py {3}".format(self._packages_directory, self.name, self.name, test_args), \
-                                  env_pythonpath = self._libraries_directory)
-        pid = pid
-
-        # There is no need to check if it is successfully started as the plugin will send over the MQ its status the UI will get the information in this way
-
-        self.set_pid(pid)
-        return pid
+#        self.log.info(u"Request to start plugin : {0} {1}".format(self.name, test_args))
+#        pid = self.exec_component(py_file = "{0}/plugin_{1}/bin/{2}.py {3}".format(self._packages_directory, self.name, self.name, test_args), \
+#                                  env_pythonpath = self._libraries_directory)
+#        pid = pid
+#
+#        # There is no need to check if it is successfully started as the plugin will send over the MQ its status the UI will get the information in this way
+#
+#        self.set_pid(pid)
+#        return pid
 
 
     def exec_component(self, py_file, env_pythonpath = None):
