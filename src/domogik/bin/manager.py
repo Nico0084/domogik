@@ -1232,8 +1232,8 @@ class Plugin(GenericComponent, MQAsyncSub):
         subp = Popen(cmd,
                      shell=True)
         pid = subp.pid
-        print(u"******* subp.communicate() *******")
-        print subp.communicate()
+        sub=subp.communicate()
+        self.log.debug(u"subp.communicate: {0}".format(sub))
         return pid
 
     def _check_if_stopped(self):
