@@ -1195,12 +1195,12 @@ class Plugin(GenericComponent, MQAsyncSub):
         test_args = ""
         if test_mode == True:
             self.log.info("The plugin {0} is requested to be launched in TEST mode. Option is {1}".format(self.name, test_option))
-            test_args = "-T {0}".format(test_option)
+            test_args = "-f -T {0}".format(test_option)
 
         ### Try to start the plugin
         Thread(None,
                   self._exec_start_plugin,
-                  "check_check_available_packages",
+                  "StartPlugin_from_Manager",
                   (),
                   {'test_args': test_args}).start()
 
@@ -1230,7 +1230,9 @@ class Plugin(GenericComponent, MQAsyncSub):
         ### Execute command
         self.log.info(u"Execute command : {0}".format(cmd))
         subp = Popen(cmd,
-                     shell=True)
+                     shell=True,
+                     stdout=PIPE,
+                     stderr=PIPE)
         pid = subp.pid
         sub=subp.communicate()
         self.log.debug(u"subp.communicate: {0}".format(sub))
