@@ -1,7 +1,6 @@
 #!/bin/bash -e
 # The -e option will make the bash stop if any command raise an error ($? != 0)
 
-export DEBIAN_FRONTEND="noninteractive"
 sudo apt-get update -qq
 sudo apt-get install -y libzmq3-dev
 pip install pyzmq
@@ -15,4 +14,3 @@ pip install docutils
 #pip install netifaces
 sudo apt-get install -y  python-netifaces
 pip install chardet
-sudo apt-get install -y mysql-server
