@@ -14,3 +14,4 @@ pip install docutils
 #pip install netifaces
 sudo apt-get install -y  python-netifaces
 pip install chardet
+sudo apt-get install -y mysql-server
