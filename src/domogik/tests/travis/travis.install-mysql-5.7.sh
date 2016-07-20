@@ -5,4 +5,4 @@ sudo dpkg -P mysql
 wget http://repo.mysql.com//mysql-apt-config_0.7.3-1_all.deb
 sudo dpkg -i mysql-apt-config_0.7.3-1_all.deb
 sudo apt-get update -q
-sudo apt-get install mysql-server
+sudo apt-get install -y mysql-server
