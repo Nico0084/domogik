@@ -7,7 +7,7 @@ pip install pyzmq
 pip install argparse
 sudo apt-get install -y python2.7-dev gcc
 sudo apt-get install -y libssl-dev
-sudo apt-get install -y libmysqlclient-dev mysql-client
+sudo apt-get install -y libmysqlclient-dev
 pip install psycopg2
 pip install docutils
 #pip install python-daemon==2.0.2
