@@ -1,6 +1,7 @@
 #!/bin/bash -e
 # The -e option will make the bash stop if any command raise an error ($? != 0)
 
-mysql -u travis -e 'create database domogik;'
+mysql -u travis -p -e 'create database domogik;'
+echo ""
 echo "USE mysql;\nUPDATE user SET password=PASSWORD('domopass') WHERE user='travis';\nFLUSH PRIVILEGES;\n" | mysql -u root
 
