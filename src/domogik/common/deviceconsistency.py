@@ -53,7 +53,7 @@ class DeviceConsistencyThread(Thread):
             plugin_json = PackageJson(name=self.name)
             for dev in self.db.list_devices_by_plugin(self.client_id):
                 # this can take some time, so guard with the stop
-                if self._stop.isSet():
+                if self._stop.is_set():
                     break
                 self.log.info("Checking device {0}({1})".format(dev['name'], dev['id']))
                 # check the device

@@ -33,7 +33,7 @@ Implements
 @license: GPL(v3)
 @organization: Domogik
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 import psutil
 import time
 from domogik.xpl.common.xplconnector import XplTimer
@@ -72,7 +72,7 @@ class ProcessInfo():
         self._stop = stop
         # check pid exists
         if not psutil.pid_exists(pid):
-            self.log.warning(u"No process '{0}' exists".format(pid))
+            self.log.warning(u"No process '{0}' exists" .format(pid))
             return
         # create psutil object
         self.p = psutil.Process(pid)
@@ -125,7 +125,7 @@ class ProcessInfo():
         if self.pid == None:
             return
         self._start_time = time.time()
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             self._get_values()
             self._stop.wait(self._interval)
 
@@ -187,3 +187,5 @@ class ProcessInfo():
 
 def display(pid, data):
     print(u"DATA ({0}) = {1}".format(pid, str(data)))
+
+

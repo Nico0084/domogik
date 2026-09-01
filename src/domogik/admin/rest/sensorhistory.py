@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 from domogik.admin.application import app, json_response, timeit
 from domogik.common.configloader import Loader
 import sys
@@ -24,7 +23,7 @@ def sensorHistory_latest(sid):
     @apiParam {Number} id The id of the sensor we want to retrieve the history from
 
     @apiSuccess {json} result The json representing the latest value
-    
+
     @apiSampleRequest /rest/ensorhistory/id/3/latest
 
     @apiSuccessExample Success-Response:
@@ -50,7 +49,7 @@ def sensorHistory_latest(sid):
     @apiParam {Number} id The id of the sensor we want to retrieve the history from
 
     @apiSuccess {json} result The json representing the latest value
-    
+
     @apiSampleRequest /rest/ensorhistory/id/2/latest
 
     @apiSuccessExample Success-Response:
@@ -134,7 +133,7 @@ def sensorHistory_last(sid, num):
                 "date": "2014-10-08T08:41:13",
                 "id": 1860242,
                 "value_num": 195.0
-            }, 
+            },
             {
                 "sensor_id": 2,
                 "original_value_num": 139.0,
@@ -352,7 +351,7 @@ def sensorHistory_from_filter(sid, ftime, ttime, interval, selector):
                 [2014, 36, 103.80341880341881],
                 [2014, 37, 108.9740680713128],
                 [2014, 38, 104.04922820191906],
-                [2014, 39, 100.21459537572254], 
+                [2014, 39, 100.21459537572254],
                 [2014, 40, 127.29646017699115],
                 [2014, 41, 121.58620689655173]
             ],
@@ -363,7 +362,7 @@ def sensorHistory_from_filter(sid, ftime, ttime, interval, selector):
                 "sum": 3507.848652
             }
         }
-    
+
     @apiErrorExample Data not found
         HTTTP/1.1 404 Not Found
 
@@ -448,7 +447,7 @@ def sensorHistory_from_to_filter(sid, ftime, interval, selector):
                 "sum": 3507.848652
             }
         }
-    
+
     @apiErrorExample Data not found
         HTTTP/1.1 404 Not Found
 

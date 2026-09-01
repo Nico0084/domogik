@@ -171,7 +171,7 @@ class BasePlugin(object):
         Check if the plugin should stop
         This method should be called to check loop condition in threads
         '''
-        return self._stop.isSet()
+        return self._stop.is_set()
 
     def get_stop(self):
         '''
@@ -201,7 +201,7 @@ class BasePlugin(object):
         # self.log.debug('New thread registered : {0}'.format(thread))
         #Remove all stopped thread from the list
         for thread in self._threads:
-            if not  thread.isAlive():
+            if not  thread.is_alive():
                 self._threads.remove(thread)
         if thread in self._threads:
             self.log.info(u"Try to register a thread twice: {0}".format(thread))

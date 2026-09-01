@@ -213,8 +213,7 @@ class Manager(XplPlugin, MQAsyncSub):
         ### Metrics
         self.metrics_processinfo = []
         self.metrics_browser = []
-        self.distribution = "{0} {1}".format(platform.linux_distribution()[0], platform.linux_distribution()[1])
-
+        self.distribution = "{system}, {node}, {release}, {version}, {machine}".format(**platform.uname()._asdict())
         # send metrics from time to time
         if self._metrics_url != None and self._metrics_id != None:
             thr_send_metrics = Thread(None,
@@ -318,7 +317,7 @@ class Manager(XplPlugin, MQAsyncSub):
     def _check_available_packages(self):
         """ Check the available packages and get informations on them
         """
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             try:
                 packages_updates = False
                 is_ok, pkg_list = self._list_packages()
@@ -766,7 +765,7 @@ class Manager(XplPlugin, MQAsyncSub):
     def _send_metrics(self):
         """ Send the metrics to a REST service. This is related to the ProcessInfo class from common/processinfo.py
         """
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             ratio = 1
             try:
 
@@ -1822,7 +1821,7 @@ class Clients():
         """ Check if some clients are dead
             If the last time a client n a alive state has been seen is greater than twice STATUS_HBEAT seconds, set the client as dead
         """
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             now = time.time()
 #            self.log.debug(u"Check dead clients ({0})".format(len(self._clients)))
             for a_client in self._clients:

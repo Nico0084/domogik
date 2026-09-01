@@ -711,7 +711,7 @@ class UdpHub(DatagramProtocol):
             '''
             Call the callback every X seconds
             '''
-            while not self._stop.isSet():
+            while not self._stop.is_set():
                 self._cb()
                 self._stop.wait(self._time)
 

@@ -46,7 +46,7 @@ import sys
 
 import json
 import sqlalchemy
-from sqlalchemy import Table, MetaData, and_, or_, not_, desc
+from sqlalchemy import Table, MetaData, text, and_, or_, not_, desc
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import func, extract
 from sqlalchemy.orm import sessionmaker, defer, scoped_session, joinedload
@@ -1507,8 +1507,8 @@ class DbHelper(object):
         }
         self.log.debug(u"Query sensor {0} history filter : {1}".format(sid, sql_query))
         if self.get_db_type() in ('mysql', 'postgresql'):
-            cond_min = "date >= '" + _datetime_string_from_tstamp(frm) + "'"
-            cond_max = "date < '" + _datetime_string_from_tstamp(to) + "'"
+            cond_min = text("date >= '{0}'".format(_datetime_string_from_tstamp(frm)))
+            cond_max = text("date < '{0}'".format(_datetime_string_from_tstamp(to)))
 #            cond_min = "date >= STR_TO_DATE('" + _datetime_string_from_tstamp(frm) + "','%Y-%m-%d %H:%i:%s')"
 #            cond_max = "date < STR_TO_DATE('" + _datetime_string_from_tstamp(to) + "','%Y-%m-%d %H:%i:%s')"
             query = sql_query[step_used][self.get_db_type()]

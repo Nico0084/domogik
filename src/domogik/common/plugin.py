@@ -915,7 +915,7 @@ class Plugin(BasePlugin, MQRep, MQAsyncSub):
         """
         # TODO : we could optimize by resetting the timer each time the status is sent
         # but as this is used only to check for dead clients by the manager, it is not very important ;)
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             self._send_status()
             self._stop.wait(STATUS_HBEAT)
 

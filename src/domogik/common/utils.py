@@ -494,7 +494,7 @@ class Timer():
             '''
             # wait first time set
             self._stopper.wait(self._time)
-            while not self._stopper.isSet():
+            while not self._stopper.is_set():
                 self._cb()
                 self._stopper.wait(self._time)
 

@@ -44,7 +44,7 @@ except ImportError:
     from flask.ext.session import Session
     pass
 from werkzeug.exceptions import Unauthorized
-from werkzeug import WWWAuthenticate
+from werkzeug.datastructures  import WWWAuthenticate
 from domogik.common.database import DbHelper
 from domogik.common.configloader import Loader as dmgLoader
 from domogik.common.plugin import PACKAGES_DIR, RESOURCES_DIR, PRODUCTS_DIR

@@ -468,7 +468,7 @@ class ScenarioInstance(MQAsyncSub):
                 self._waitEval = True
                 self._log.info(u"Wait end of current eval and restart a new.")
                 self._stopWaitEval.clear()
-                while not self._stopWaitEval.isSet() :
+                while not self._stopWaitEval.is_set() :
                     time.sleep(0.1)
                 self._waitEval = False
             elif self._behavior == 'eval': # Stop current and do next
