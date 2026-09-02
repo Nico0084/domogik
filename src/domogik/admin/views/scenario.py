@@ -63,6 +63,13 @@ def scenario_examples():
     return render_template('scenario_examples.html',
         mactive = u"scenario")
 
+@app.route('/scenario/help/<id>')
+@login_required
+@timeit
+def scenario_helps(id):
+    return render_template('help/scenario/{0}.html'.format(id),
+        mactive = u"scenario")
+
 @app.route('/scenario/del/<id>')
 @login_required
 @timeit

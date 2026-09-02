@@ -185,7 +185,7 @@ class GeoInLocTest(AbstractTest):
                   this.setOutput(true, null);
                   this.setColour(230);
                   this.setTooltip("Test person position relative to a fixed location. Parameters : Buffer person (in meter) used for uncertain positioning. Buffer location (in meter) used for detect area leave and avoid unnecessary triggering of switching between entry and leave from area limits.");
-                  this.setHelpUrl("");"""
+                  this.setHelpUrl("/scenario/help/tests_location");"""
 
 class GeoInLocTestDummy(GeoInLocTest):
     """ GeoInLocTestDummy : evaluate a location to another by cloning (dummy) a main GeoInLocTest

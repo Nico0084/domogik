@@ -1,0 +1,710 @@
+{% extends theme("base/base.html") %}
+
+{% block content %}
+<div class="container">
+    <h1>{% trans %}Scenario test location help{% endtrans %}</h1>
+
+    <h2>{% trans %}Description{% endtrans %}</h2><strong></strong>
+    <ul>
+        <li>{% trans %}Logical test between person position relative and a fixed location. A buffer system could be use to avoid reccusirve detection of person entry/leave around limits of area.{% endtrans %}</li>
+        <li>{% trans %}Input : {% endtrans %}</li>
+        <ul>
+            <li>{% trans %}Person is selected form <strong>Devices/core</strong> sensor location that devined in domogik <strong>Users</strong> with option <strong>User is using location</strong> but could also be a DT_CoordD type from an other device sensor.{% endtrans %}</li>
+            <li>{% trans %}Area location is selected form <strong>Locations</strong> sensor that defined in domogik <strong>Locations</strong>.{% endtrans %}</li>
+        </ul>
+        <li>{% trans %}Parameters : {% endtrans %}</li>
+        <ul>
+            <li>{% trans %}<strong>Buffer</strong> for person (in meter) used for uncertain positioning.{% endtrans %}</li>
+            <li>{% trans %}<strong>Test type</strong> for which kind of location detection is applied, choices are :{% endtrans %}</li>
+            <ul>
+                <li>{% trans %}<strong>present in</strong> : test if person is allready in location.{% endtrans %}</li>
+                <li>{% trans %}<strong>absent from</strong> : test if person is allready out location.{% endtrans %}</li>
+                <li>{% trans %}<strong>enter in</strong> : test if person just enter in location.{% endtrans %}</li>
+                <li>{% trans %}<strong>leave</strong> : test if person just leave location.{% endtrans %}</li>
+            </ul>
+          <li>{% trans %}<strong>Buffer</strong> for location (in meter) used for detect area leave and avoid unnecessary triggering of switching between entry and leave from area limits.{% endtrans %}</li>
+        </ul>
+    </ul>
+
+
+    <h2>{% trans %}Test location sample{% endtrans %}</h2>
+    <div class="scenario-sample">
+      <img src="/static/images/help/scenario/tests_location.png">
+      <h3>{% trans %}Prerequisites{% endtrans %}</h3>
+      <ul>
+        <li>{% trans %}No dependency{% endtrans %}</li>
+      </ul>
+      <h3>{% trans %}Access menu{% endtrans %} :</h3>
+      <p>{% trans %}<strong>Logic</strong>.{% endtrans %}</p>
+    </div>
+</div>
+
+<style>
+.coords {
+    background-color: black;
+    color: white;
+    padding: 5px;
+}
+</style>
+
+<link rel="stylesheet" href="/static/libraries/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/static/libraries/L.Control.Locate.min.css"/>
+<script type="text/javascript" src="/static/libraries/leaflet/leaflet.js"></script>
+<script type="text/javascript" src="/static/libraries/leaflet/Leaflet.Editable.js"></script>
+<script type="text/javascript" src="/static/libraries/leaflet/Path.Drag.js"></script>
+<script type="text/javascript" src="/static/libraries/L.Control.Locate.min.js"></script>
+<div class="container">
+    <h1>Location Edit</h1>
+    <form id="location_form" method="post" role="form" class="form-horizontal">
+            <input id="csrf_token" name="csrf_token" type="hidden" value="1545606178##8accd4a772d961a64cc770cadb8cf0133ce5c216">
+            <input id="locid" name="locid" type="hidden" value="2">
+            <input id="ctrl_type" name="ctrl_type" type="hidden" value="polygon">
+            <input id="lat" name="lat" type="hidden" value="48.853230">
+            <input id="lng" name="lng" type="hidden" value="2.349079">
+            <input id="formatted_address" name="formatted_address" type="hidden" value="">
+            <input id="postal_code" name="postal_code" type="hidden" value="">
+            <input id="locality" name="locality" type="hidden" value="">
+            <input id="country" name="country" type="hidden" value="">
+            <input id="country_short" name="country_short" type="hidden" value="">
+            <input id="ctrl_area" name="ctrl_area" type="hidden" value="[	[[48.853082,2.348832],[48.853576,2.349159],[48.85299,2.350844],[48.852786,2.350854],[48.852659,2.350726],[48.852602,2.350318],[48.852383,2.350184],[48.85251,2.349744],[48.852719,2.349819],[48.853082,2.348832]] ]">
+        <div class="form-group">
+            <div class="col-xs-6">
+            <label class="control-label col-xs-3"><label for="locname">Name</label></label>
+                <input id="locname" name="locname" size="50" type="text" value="Cabane">
+                <span class="help-block"></span>
+            </div>
+            <input id="locisHome" name="locisHome" type="hidden" value="False">
+        <div class="form-group">
+            <div class="col-xs-3">
+                <input id="getintersects" value="Process intersection" class="btn btn-primary">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-xs-3">
+                <div class="row">
+                    <label for="personBuff">Person buffer</label>
+                    <input id="personBuff" name="personBuff" size="10" type="text" value="10">
+                </div>
+                <div class="row">
+                    <label for="locBuff">localisation buffer</label>
+                    <input id="locBuff" name="locBuff" size="10" type="text" value="5">
+                </div>
+                <div class="row">
+                    <label for="operator">Operator</label>
+                    <select class="form-control" id="operator" name="operator">
+                        <option value="present" selected>Present</option>
+                        <option value="absent">Absent</option>
+                        <option value="leave">Leave</option>
+                        <option value="enter">Enter</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div id="locresult" class="alert alert-warning" role="alert">
+                        <h3 id="locstate">undefined</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-9">
+                <div class="input-group">
+                    <input id="searchLocation" type="text" class="form-control" placeholder="Type in an address" size="50" value="">
+                    <span class="input-group-btn">
+                        <button id="find" class="btn btn-default" type="button">
+                          <i class="fa fa-search"></i>
+                        </button>
+                    </span>
+                </div>
+                <select id="searchResult" class="form-control" placeholder="No result">
+                    <option value="0" disabled="">No result</option>
+                </select>
+                <div id="map_canvas" style="width: 100%; height: 400px; position: relative;" class="leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0"><div class="leaflet-pane leaflet-map-pane" style="transform: translate3d(0px, 0px, 0px);"><div class="leaflet-pane leaflet-tile-pane"><div class="leaflet-layer " style="z-index: 1; opacity: 1;"><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 18; transform: translate3d(0px, 0px, 0px) scale(1);"><img alt="" role="presentation" src="http://b.tile.osm.org/18/135095/95630.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(201px, 63px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://c.tile.osm.org/18/135096/95630.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(457px, 63px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://a.tile.osm.org/18/135095/95629.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(201px, -193px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://b.tile.osm.org/18/135096/95629.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(457px, -193px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://c.tile.osm.org/18/135095/95631.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(201px, 319px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://a.tile.osm.org/18/135096/95631.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(457px, 319px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://a.tile.osm.org/18/135094/95630.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-55px, 63px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://a.tile.osm.org/18/135097/95630.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(713px, 63px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://c.tile.osm.org/18/135094/95629.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-55px, -193px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://c.tile.osm.org/18/135097/95629.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(713px, -193px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://b.tile.osm.org/18/135094/95631.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-55px, 319px, 0px); opacity: 1;"><img alt="" role="presentation" src="http://b.tile.osm.org/18/135097/95631.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(713px, 319px, 0px); opacity: 1;"></div></div></div><div class="leaflet-pane leaflet-shadow-pane"></div><div class="leaflet-pane leaflet-overlay-pane"><svg pointer-events="none" class="leaflet-zoom-animated" width="1018" height="480" viewBox="-85 -40 1018 480" style="transform: translate3d(-85px, -40px, 0px) scale(1);"><g><path class="leaflet-interactive leaflet-path-draggable" stroke="red" stroke-opacity="1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4, 1, 2" fill="red" fill-opacity="0.2" fill-rule="evenodd" d="M371 237L429 135L476 164L469 186L475 189L428 264z"></path></g></svg></div><div class="leaflet-pane leaflet-marker-pane"><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(371px, 237px, 0px); z-index: 1238;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(429px, 135px, 0px); z-index: 1136;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0.5; transform: translate3d(457px, 191px, 0px); z-index: 191;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(476px, 164px, 0px); z-index: 1165;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0.5; transform: translate3d(457px, 63px, 0px); z-index: 63;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(469px, 186px, 0px); z-index: 1187;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0; transform: translate3d(457px, 63px, 0px); z-index: 63;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(475px, 189px, 0px); z-index: 1190;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0; transform: translate3d(457px, 63px, 0px); z-index: 63;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-vertex-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; transform: translate3d(428px, 264px, 0px); z-index: 1265;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0.5; transform: translate3d(457px, 191px, 0px); z-index: 191;"></div><div class="leaflet-marker-icon leaflet-div-icon leaflet-middle-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" tabindex="0" style="margin-left: -4px; margin-top: -4px; width: 8px; height: 8px; opacity: 0.5; transform: translate3d(457px, 319px, 0px); z-index: 319;"></div><img src="/static/images/marker-icon_current.png" class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive leaflet-marker-draggable" alt="" tabindex="0" style="margin-left: -12px; margin-top: -45px; width: 25px; height: 45px; transform: translate3d(444px, 185px, 0px); z-index: 185;"></div><div class="leaflet-pane leaflet-tooltip-pane"></div><div class="leaflet-pane leaflet-popup-pane"></div><div class="leaflet-proxy leaflet-zoom-animated" style="transform: translate3d(3.45845e+07px, 2.44814e+07px, 0px) scale(131072);"></div></div><div class="leaflet-control-container"><div class="leaflet-top leaflet-left"><div class="leaflet-control-zoom leaflet-bar leaflet-control"><a class="leaflet-control-zoom-in leaflet-disabled" href="#" title="Zoom in" role="button" aria-label="Zoom in">+</a><a class="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out">−</a></div><div class="leaflet-control-locate leaflet-bar leaflet-control"><a class="leaflet-bar-part leaflet-bar-part-single" title="Show me where I am"><span class="fa fa-map-marker"></span></a></div><div class="leaflet-control leaflet-bar"><a class="" href="#" title="Create a new polygon to replace area control">▰</a></div><div class="leaflet-control leaflet-bar"><a class="" href="#" title="Create a new circle to replace area control">⬤</a></div></div><div class="leaflet-top leaflet-right"></div><div class="leaflet-bottom leaflet-left"></div><div class="leaflet-bottom leaflet-right"><div class="leaflet-control-attribution leaflet-control"><a href="http://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | © <a href="http://osm.org/copyright">OpenStreetMap</a> contributors</div></div></div></div>
+                <div id="coordinates" class="coords">lat: 43.693923, lng: 5.524224</div>
+            </div>
+        </div>
+    </form>
+    <script>
+      var searchLocResult = [];
+      var markerResult = [];
+      var map = null;
+      var layerGroup = null;
+      var layerSelect = null;
+      var markerPosOk;
+      var personMarker;
+
+          // ****************** WebSocket resquest *******************
+      function sendRequest(request, data, callback) {
+        $.getJSON('/scenario/request_geoloc_demo/' + request, data, callback);
+      };
+
+
+      function updateFormParams() {
+        let latlng = layerSelect.selectMarker.getLatLng();
+        document.getElementById('lat').value = latlng.lat;
+        document.getElementById('lng').value = latlng.lng;
+        document.getElementById('ctrl_type').value = layerSelect.ctrlType;
+        switch (layerSelect.ctrlType) {
+            case "circle" :
+                if (!layerSelect.hasLayer(layerSelect.selectMarker)) {
+                    layerSelect.addLayer(layerSelect.selectMarker);
+                }
+                document.getElementById('ctrl_area').value = parseInt(layerSelect.areaCtrl.getRadius());
+                break;
+            case "polygon" :
+                if (layerSelect.hasLayer(layerSelect.selectMarker)) {
+                    layerSelect.removeLayer(layerSelect.selectMarker);
+                }
+                let geojson = layerSelect.areaCtrl.toGeoJSON().geometry.coordinates;
+                // Switch lat <-> lng
+                let asgeojson = [];
+                for (i=0; i < geojson.length; i++) {
+                    let subjson = [];
+                    if (geojson[i][0] != undefined) {
+                        for (ii=0; ii < geojson[i].length; ii++) {
+                            subjson.push([geojson[i][ii][1], geojson[i][ii][0]])
+                        }
+                    }
+                    asgeojson.push(subjson);
+                }
+                document.getElementById('ctrl_area').value = JSON.stringify(asgeojson);
+                ;
+                break;
+        }
+      }
+      function updateLocation() {
+        let latlng = layerSelect.selectMarker.getLatLng();
+        if (layerSelect.areaCtrl && layerSelect.ctrlType == "circle") {
+            let editable = layerSelect.areaCtrl.editEnabled;
+            if (editable) layerSelect.areaCtrl.disableEdit();
+            layerSelect.areaCtrl.setLatLng(latlng);
+            if (editable) layerSelect.areaCtrl.enableEdit();
+            layerSelect.areaCtrl.dragging.disable();
+        }
+      }
+
+      function updateSelectMarker(latLng) {
+        if (layerSelect.areaCtrl && layerSelect.ctrlType == "circle") {
+            layerSelect.areaCtrl.setLatLng(latLng);
+        } else {
+            switch (layerSelect.ctrlType) {
+                case "circle" :
+                    layerSelect.areaCtrl = L.circle(latLng, {radius: document.getElementById('ctrl_area').value,
+                        color:'red', fill: true, fillColor: 'red', fillOpacity: 0.2, dashArray: "4, 1, 2",
+                        draggable:false});
+                    break;
+                case "polygon" :
+                    let geojson = JSON.parse(document.getElementById('ctrl_area').value);
+                    layerSelect.areaCtrl = L.polygon(geojson, {color: 'red', fill: true, fillColor: 'red', fillOpacity: 0.2, dashArray: "4, 1, 2", draggable: true});
+                    break;
+            }
+            if (layerSelect.areaCtrl) {
+                layerSelect.addLayer(layerSelect.areaCtrl);
+                layerSelect.areaCtrl.enableEdit();
+            }
+        }
+        if (layerSelect.selectMarker) {
+            if ( !layerSelect.selectMarker.getLatLng().equals(latLng)) {
+                layerSelect.selectMarker.setLatLng(latLng);
+                layerSelect.changed = true;
+            }
+            let img = layerSelect.changed ? 'marker-icon_selected.png' : 'marker-icon_current.png';
+            if (layerSelect.selectMarker._icon.attributes["0"].nodeValue.search(img) == -1) {
+                layerSelect.selectMarker.setIcon(L.icon({iconUrl: `/static/images/${img}`,
+                                                          iconSize:     [25, 45], // size of the icon
+                                                          iconAnchor:   [12, 45], // point of the icon which will correspond to marker's location
+                                                          popupAnchor:  [0, -40] // point from which the popup should open relative to the iconAnchor
+                                                    }));
+            }
+        } else {
+            let img = layerSelect.changed ? 'marker-icon_selected.png' : 'marker-icon_current.png';
+            layerSelect.selectMarker = L.marker(latLng, {icon: L.icon({iconUrl: `/static/images/${img}`,
+                                                          iconSize:     [25, 45], // size of the icon
+                                                          iconAnchor:   [12, 45], // point of the icon which will correspond to marker's location
+                                                          popupAnchor:  [0, -40] // point from which the popup should open relative to the iconAnchor
+                                                    }), 'draggable': true});
+            if (layerSelect.ctrlType == "circle") layerSelect.addLayer(layerSelect.selectMarker);
+            layerSelect.selectMarker.bindPopup(function(){
+                        let popup =  '<div><ul>'+
+                            '<li>Latitude : '+this.getLatLng().lat+' </li>'+
+                            '<li>Longitude : '+this.getLatLng().lng+' </li>';
+                        switch (layerSelect.ctrlType) {
+                            case "circle" :
+                                popup += '<li>Radius : '+parseInt(layerSelect.areaCtrl.getRadius())+' m </li>';
+                                break;
+                            case "polygon" :
+                                popup += '<li>Use polygone</li>';
+                                break;
+                            default :
+                                popup += '<li>Unknow area ctrl</li>';
+                                break;
+                        }
+                        popup += '</ul></div>';
+                        return popup})
+            layerSelect.selectMarker.on('dragend ', function(){
+                if (!layerSelect.selectMarker.actived) {
+                    layerSelect.selectMarker.setIcon(L.icon({iconUrl: '/static/images/marker-icon_selected.png',
+                                                          iconSize:     [25, 45], // size of the icon
+                                                          iconAnchor:   [12, 45], // point of the icon which will correspond to marker's location
+                                                          popupAnchor:  [0, -40] // point from which the popup should open relative to the iconAnchor
+                                                          }));
+                    layerSelect.selectMarker.actived = true;
+                }
+            });
+            layerSelect.selectMarker.on('dragend', function(e){
+                        console.log("dragend");
+                        updateLocation();
+                        updateFormParams();
+            });
+            markerPosOk = layerSelect.selectMarker.getLatLng();
+            layerSelect.selectMarker.on('drag', function(e){
+                        let inside = true;
+                        if (layerSelect.ctrlType != "circle") inside = isMarkerInsidePolygon(this, layerSelect.areaCtrl);
+                        console.log("drag marker inside : "+inside);
+                        if (inside) {
+                            markerPosOk = layerSelect.selectMarker.getLatLng();
+                            updateLocation();
+                            updateFormParams();
+                        } else {
+                            this.setLatLng(markerPosOk);
+                        }
+            });
+        }
+      }
+
+      $(function(){
+        $("#getintersects").click(function(){ getIntersects(); });
+        var onProcess = false;
+        function getIntersects() {
+            if (!onProcess) {
+                onProcess = true;
+                sendRequest('getintersects', {'personLat': personMarker.getLatLng().lat, 'personLng': personMarker.getLatLng().lng,
+                                                    'personBuffer' : document.getElementById('personBuff').value,
+                                                    'operator': document.getElementById('operator').value,
+                                                    'ctrl_type': document.getElementById('ctrl_type').value,
+                                                    'lat': document.getElementById('lat').value,
+                                                    'lng': document.getElementById('lng').value,
+                                                    'locationBuffer': document.getElementById('locBuff').value,
+                                                    'ctrl_area': document.getElementById('ctrl_area').value }, function(data, result) {
+                            if (result == "error" || data.result == "error") {
+                                onProcess = false;
+                                console.log('Error : ' + JSON.stringify(data));
+                            } else {
+                               // console.log('OK : ' + JSON.stringify(data));
+
+                                if (layerSelect.areaBuffer) map.removeLayer(layerSelect.areaBuffer);
+                                layerSelect.areaBuffer = L.polygon(data.content.locbuffer, {color: 'orange', fill: true, fillColor: 'orange', fillOpacity: 0.2, dashArray: "6, 1, 3", draggable: false}).addTo(map);
+                                if (personMarker.areaBuffer) map.removeLayer(personMarker.areaBuffer);
+                                personMarker.areaBuffer = L.polygon(data.content.personbuffer, {color: 'green', fill: true, fillColor: 'green', fillOpacity: 0.2, dashArray: "6, 1, 3", draggable: false}).addTo(map);
+                                if (data.content.result) document.getElementById('locresult').className = "alert alert-success";
+                                else document.getElementById('locresult').className = "alert alert-danger";
+                                document.getElementById('locstate').textContent = data.content.state;
+                                onProcess = false;
+                                }
+                        });
+            } else {
+                console.log('Abord getIntersects' );
+            }
+        };
+        $("#locBuff").change(function(){
+            sendRequest('getBuffer', {'lat': layerSelect.selectMarker.getLatLng().lat, 'lng': layerSelect.selectMarker.getLatLng().lng,
+                                        'buffer' : document.getElementById('locBuff').value,
+                                        'type': document.getElementById('ctrl_type').value,
+                                        'area': document.getElementById('ctrl_area').value }, function(data, result) {
+                        if (result == "error" || data.result == "error") {
+                            console.log('Error : ' + JSON.stringify(data));
+                        } else {
+                            console.log('OK : ' + JSON.stringify(data));
+                            if (layerSelect.areaBuffer) map.removeLayer(layerSelect.areaBuffer);
+                            layerSelect.areaBuffer = L.polygon(data.content.poly, {color: 'orange', fill: true, fillColor: 'orange', fillOpacity: 0.2, dashArray: "6, 1, 3", draggable: false}).addTo(map);
+                            getIntersects();
+                        }
+                    });
+        });
+        $("#personBuff").change(function(){
+            setPersonBuffer();
+            getIntersects();
+        });
+        var latLng = [document.getElementById('lat').value, document.getElementById('lng').value];
+        // Init the map
+        map = L.map(document.getElementById('map_canvas'), {editable: true}).setView(latLng, 10);
+        // Init tiles source layer
+        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        // Show the lat and lng under the mouse cursor.
+        var coordsDiv = document.getElementById('coordinates');
+        map.on('mousemove', function(event) {
+            coordsDiv.textContent =
+                'lat: ' + event.latlng.lat.toFixed(6)+ ', ' +
+                'lng: ' + event.latlng.lng.toFixed(6);
+            });
+
+        layerGroup = new L.layerGroup().addTo(map);
+        layerSelect = new L.layerGroup().addTo(map);
+        layerSelect.changed =  (document.getElementById('locid').value != "0") ? false : true;
+        layerSelect.ctrlType = document.getElementById('ctrl_type').value;
+        updateSelectMarker(latLng);
+        map.fitBounds(L.latLngBounds(layerSelect.areaCtrl.getBounds()));
+
+        L.control.locate().addTo(map);
+
+        personMarker = L.marker(latLng, {icon: L.icon({iconUrl: `/static/images/map_person-1.png`,
+                                                      iconSize:     [42, 42], // size of the icon
+                                                      iconAnchor:   [21, 42], // point of the icon which will correspond to marker's location
+                                                      popupAnchor:  [0, -40] // point from which the popup should open relative to the iconAnchor
+                                                }), 'draggable': true}).addTo(map);
+        setPersonBuffer();
+        personMarker.on('drag', function(e){
+            getIntersects();
+        });
+        personMarker.on('dragend', function(e){
+            onProcess = false
+            getIntersects();
+        });
+        $("#radius").keyup(function(){
+            layerSelect.areaCtrl.setRadius(this.value);
+        });
+
+        var options = {
+          map: "#map_canvas",
+          details: "#location_form"
+        };
+        $("#find").click(function(){
+            searchLocation(document.getElementById('searchLocation').value);
+        $('#searchLocation').submit(function(e){
+            searchLocation(document.getElementById('searchLocation').value);
+            e.preventDefault();
+        });
+        });
+        $("#searchResult").change(function(){
+            map.setView(L.latLng([searchLocResult[this.value].lat, searchLocResult[this.value].lon]), 10);
+            highlight_result(searchLocResult[this.value]);
+        });
+        L.EditControl = L.Control.extend({
+
+            options: {
+                position: 'topleft',
+                callback: null,
+                kind: '',
+                html: ''
+            },
+
+            onAdd: function (map) {
+                var container = L.DomUtil.create('div', 'leaflet-control leaflet-bar'),
+                    link = L.DomUtil.create('a', '', container);
+
+                link.href = '#';
+                link.title = 'Create a new ' + this.options.kind + ' to replace area control';
+                link.innerHTML = this.options.html;
+                L.DomEvent.on(link, 'click', L.DomEvent.stop)
+                          .on(link, 'click', function () {
+                            window.LAYER = this.options.callback.call(map.editTools);
+                          }, this);
+
+                return container;
+            }
+
+        });
+        L.NewPolygonControl = L.EditControl.extend({
+
+            options: {
+                position: 'topleft',
+                callback: startNewPolygon,
+                kind: 'polygon',
+                html: '▰'
+            }
+
+        });
+
+        L.NewCircleControl = L.EditControl.extend({
+
+            options: {
+                position: 'topleft',
+                callback: startNewCircle,
+                kind: 'circle',
+                html: '⬤'
+            }
+
+        });
+
+        map.addControl(new L.NewPolygonControl());
+        map.addControl(new L.NewCircleControl());
+
+        map.on('editable:created', function (e) {
+            console.log('editable:created');
+            let drag = (layerSelect.ctrlType == "circle") ? false : true;
+            e.layer.setStyle({color: 'red', fill: true, fillColor: 'red', fillOpacity: 0.2, dashArray: "4, 1, 2", draggable: drag});
+            layerSelect.areaCtrl = e.layer;
+        });
+        var tempPoly;
+        map.on('editable:vertex:drag', function (e) {
+            let inside = true;
+            if (layerSelect.ctrlType != "circle") inside = isMarkerInsidePolygon(layerSelect.selectMarker, layerSelect.areaCtrl);
+            console.log("editable:vertex:drag : "+inside);
+            if (!inside) {
+                markerPosOk = getLatLngInPolygone(markerPosOk, layerSelect.areaCtrl.getLatLngs());
+                layerSelect.selectMarker.setLatLng(markerPosOk);
+            }
+        });
+        map.on('editable:vertex:dragend', function (e) {
+            onProcess = false
+            getIntersects();
+        });
+        map.on('editable:editing', function (e) {
+            let inside = true;
+            if (layerSelect.ctrlType != "circle") inside = isMarkerInsidePolygon(layerSelect.selectMarker, layerSelect.areaCtrl);
+            console.log("editable:editing marker inside : "+inside);
+            updateFormParams();
+        });
+        map.on('editable:drawing:end', function (e) {
+            console.log('editable:drawing:end');
+            if (layerSelect.ctrlType == "circle") {
+                e.layer.dragging.disable();
+                updateSelectMarker(e.layer.getLatLng());
+                updateFormParams();
+            }
+        });
+        map.on('editable:drag', function (e) {
+            let inside = true;
+            if (layerSelect.ctrlType != "circle") inside = isMarkerInsidePolygon(layerSelect.selectMarker, layerSelect.areaCtrl);
+            console.log("editable:drag : "+inside);
+            if (!inside) {
+                markerPosOk = getLatLngInPolygone(markerPosOk, layerSelect.areaCtrl.getLatLngs());
+                layerSelect.selectMarker.setLatLng(markerPosOk);
+            }
+        });
+    });
+    // Hack leaflet.Editable plugin to hidden vertex center control to avoid circle drag
+    L.Editable.VertexMarker.prototype.onAdd = function (map) {
+        L.Marker.prototype.onAdd.call(this, map);
+        if (this.editor.feature.options.radius !== undefined && this.getIndex() === 0) {
+            this.getElement().style.display = 'none';
+        } else {
+            this.on('drag', this.onDrag);
+            this.on('dragstart', this.onDragStart);
+            this.on('dragend', this.onDragEnd);
+            this.on('mouseup', this.onMouseup);
+            this.on('click', this.onClick);
+            this.on('contextmenu', this.onContextMenu);
+            this.on('mousedown touchstart', this.onMouseDown);
+            this.on('mouseover', this.onMouseOver);
+            this.on('mouseout', this.onMouseOut);
+        }
+        this.addMiddleMarkers();
+    }
+    function cleanLayerSelect() {
+        if (layerSelect.areaCtrl) map.removeLayer(layerSelect.areaCtrl);
+        if (layerSelect.areaBuffer)  map.removeLayer(layerSelect.areaBuffer);
+    }
+    function startNewPolygon() {
+        cleanLayerSelect();
+        layerSelect.ctrlType = "polygon";
+        map.editTools.startPolygon();
+    }
+
+    function startNewCircle() {
+        cleanLayerSelect();
+        layerSelect.ctrlType = "circle";
+        map.editTools.startCircle();
+    }
+
+    function searchLocation(value) {
+        let url = encodeURI(`https://nominatim.openstreetmap.org/search?q=${value}&format=json&polygon=1&addressdetails=1`);
+        var jqxhr = $.getJSON( url, function() {
+                        console.log( "success" );
+            })
+            .done(function(data) {
+                console.log(data);
+                searchLocResult = data;
+                let result = document.getElementById('searchResult');
+                result.options.length = 0;
+                for (i=0; i < data.length; i++) {
+                    result.options[i] = new Option(data[i].display_name, i);
+                }
+                if (result.options.length == 0) {
+                    result.options[0] =  new Option("No result", 0);
+                    result.options[0].setAttribute('disabled', "");
+                } else {
+                    result.options[0].selected = true;
+                    map.setView(L.latLng([searchLocResult[0].lat, searchLocResult[0].lon]), 10);
+                    highlight_result(searchLocResult[0]);
+                }
+            })
+            .fail(function(e) {
+                let result = document.getElementById('searchResult');
+                result.options.length = 0;
+                searchLocResult = [];
+                console.log( "error" );
+            })
+            .always(function(e) {
+                console.log( "complete" );
+            });
+      }
+
+    function circle_for_result(result){
+        return L.circleMarker([result.lat,result.lon], { radius: 10, weight: 2, fillColor: '#ff7800', color: 'blue', opacity: 0.75});
+    }
+
+    function highlight_result(result){
+        if (!result){ return }
+
+        layerGroup.clearLayers();
+
+        if (result.lat){
+
+            circle = circle_for_result(result);
+            circle.bindPopup(function(){return '<div> <span class="input-group-btn">'+
+                            '<button id="setselect" class="btn btn-primary" type="button" onclick="makeCircleRef(circle);"> set as location  '+
+                                '<i class="glyphicon glyphicon-ok-sign"></i>'+
+                            '</button>'+
+                        '</span>'+
+                    '</div>';
+            });
+        }
+        if (result.polygonpoints){
+            result.asgeojson = [];
+            for (i=0; i < result.polygonpoints.length; i++) {
+                result.asgeojson.push([result.polygonpoints[i][1], result.polygonpoints[i][0]])
+            }
+
+            let geojson_layer = L.polygon(result.asgeojson, {color: 'blue', fill: true, fillColor: 'blue', fillOpacity: 0.2});
+            layerGroup.addLayer(geojson_layer);
+            let bounds = [[result.boundingbox[0]*1,result.boundingbox[2]*1], [result.boundingbox[1]*1,result.boundingbox[3]*1]];
+            map.fitBounds(bounds);
+            if (!geojson_layer.isSelected) {
+                poly = geojson_layer;
+                geojson_layer.isSelected = true;
+                geojson_layer.bindPopup(function(){return '<div> <span class="input-group-btn">'+
+                            '<button id="seteditable" class="btn btn-primary" type="button" onclick="makePolyEditable(poly);"> use as shape reference  '+
+                                '<i class="glyphicon glyphicon-ok-sign"></i>'+
+                            '</button>'+
+                        '</span>'+
+                    '</div>';
+                })
+            }
+        }
+        else {
+            let bounds = [[result.boundingbox[0]*1,result.boundingbox[2]*1], [result.boundingbox[1]*1,result.boundingbox[3]*1]];
+            let geojson_layer = L.rectangle(bounds, {color: 'blue', fill: true, fillColor: 'blue', fillOpacity: 0.2});
+            layerGroup.addLayer(geojson_layer);
+            map.fitBounds(bounds);
+            }
+        if (circle) { layerGroup.addLayer(circle);}
+    }
+    function makeCircleRef(circle) {
+        circle.closePopup();
+        updateSelectMarker(circle.getLatLng());
+        updateFormParams();
+    }
+    function makePolyEditable(poly) {
+        poly.closePopup().unbindPopup();
+        layerGroup.clearLayers();
+        cleanLayerSelect();
+        poly.setStyle({color: 'red', fill: true, fillColor: 'red', fillOpacity: 0.2, dashArray: "4, 1, 2", draggable:true}).addTo(map);
+        poly.enableEdit();
+        layerSelect.ctrlType = "polygon";
+        layerSelect.areaCtrl = poly;
+    }
+    function setPersonBuffer() {
+        sendRequest('getBuffer', {'lat': personMarker.getLatLng().lat, 'lng': personMarker.getLatLng().lng,
+                                        'buffer' :  document.getElementById('personBuff').value,
+                                        'type': 'person',
+                                        'area': 0 }, function(data, result) {
+                if (result == "error" || data.result == "error") {
+                    console.log('Error : ' + JSON.stringify(data));
+                } else {
+                    if (personMarker.areaBuffer) map.removeLayer(personMarker.areaBuffer);
+                    personMarker.areaBuffer = L.polygon(data.content.poly, {color: 'green', fill: true, fillColor: 'green', fillOpacity: 0.2, dashArray: "6, 1, 3", draggable: false}).addTo(map);
+                }
+            });
+    };
+
+// utils positionning calcul
+    function isMarkerInsidePolygon(marker, poly) {
+        return isPointInsidePolygon(marker.getLatLng(), poly.getLatLngs());
+    }
+
+    function isPointInsidePolygon(latlng, poly) {
+        var inside = false;
+        var x = latlng.lat, y = latlng.lng;
+        for (var ii=0;ii<poly.length;ii++){
+            var polyPoints = poly[ii];
+            for (var i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+                var xi = polyPoints[i].lat, yi = polyPoints[i].lng;
+                var xj = polyPoints[j].lat, yj = polyPoints[j].lng;
+
+                var intersect = ((yi > y) != (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    function getLatLngInPolygone(latlng, poly) {
+        var newLatLng = latlng;
+        let step = 0.00001;
+        let inside = false;
+        while (!inside || step >= 0.01) {
+            let points = spiral(newLatLng, step, step);
+            for (i=0; i < points.length; i++) {
+                inside = isPointInsidePolygon(points[i], poly);
+                if (inside) {
+                    newLatLng = points[i];
+                    break;
+                }
+            }
+            step = step * 2;
+        }
+        return newLatLng;
+    }
+
+    function spiral(latlng, a, b) {
+        var points = [];
+        for (i = 0; i < 720; i++) {
+            angle = 0.1 * i;
+            x = latlng.lng + (a + b * angle) * Math.cos(angle);
+            y = latlng.lat + (a + b * angle) * Math.sin(angle);
+
+            points.push({lng: x, lat: y});
+        }
+        return points;
+    }
+
+    function hull (polygons, d) {
+        var polygon = polygons[0];
+        var hull, i, xA, yA, xB, yB, xC, yC, AB, BC, xI, yI, k, xM, yM;
+        if (polygon.length < 3)
+            return (null);
+        hull = new Array ();
+        polygon.push (polygon[0]);
+        xA = polygon[polygon.length - 2].lng;
+        yA = polygon[polygon.length - 2].lat;
+        xB = polygon[0].lng;
+        yB = polygon[0].lat;
+        AB = Math.sqrt ((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
+        i = 1;
+        while (true) {
+            xC = polygon[i].lng;
+            yC = polygon[i].lat;
+            BC = Math.sqrt ((xC - xB) * (xC - xB) + (yC - yB) * (yC - yB));
+            xI = 0.5 * ((yA - yB) / AB + xB - (yC - yB) / BC + xB);
+            yI = 0.5 * (- (xA - xB) / AB + yB + (xC - xB) / BC + yB);
+            k = d / ((xI - xB) * (xI - xB) + (yI - yB) * (yI - yB));
+            xM = k * (xI - xB) + xB;
+            yM = k * (yI - yB) + yB;
+            hull.push ({lng:xM, lat:yM});
+            i ++;
+            if (i == polygon.length)
+                break;
+            xA = xB;
+            yA = yB;
+            xB = xC;
+            yB = yC;
+            AB = BC;
+        }
+        polygon.pop ();
+        return (hull);
+    }
+
+    </script>
+</div>
+{% endblock %}
