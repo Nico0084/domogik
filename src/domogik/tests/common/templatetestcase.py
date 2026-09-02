@@ -34,8 +34,9 @@ Usage
 @organization: Domogik
 """
 
-import datetime
-from threading import Event
+from datetime import datetime
+from threading import Event, Thread
+import Queue
 from domogik.xpl.common.xplconnector import Listener
 from domogik.xpl.common.xplmessage import XplMessage
 from domogik.xpl.common.plugin import XplPlugin
@@ -57,7 +58,7 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
     def setUp(self):
         """ sort of a Constructor
         """
-        print(u"\n------------------------------------------------------------------")
+        Printc.info(u"\n------------------------------------------------------------------")
         #self.config = {}
 
 
@@ -72,70 +73,91 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
         msg = MQMessage()
         msg.set_action('device.get')
         mq_client = MQSyncReq(zmq.Context())
-        result = mq_client.request('admin', msg.get(), timeout=10)
+        result = mq_client.request('admin', msg.get(), timeout=20)
         if not result:
-            raise RuntimeError(u"Unable to retrieve the device list, max attempt achieved : {0}".format(max_attempt))
+            raise RuntimeError(u"Unable to retrieve the device list, timeout")
             return False
         else:
             device_list = result.get_data()['devices']
-
+        device = None
         for dev in device_list:
             if dev['id'] == device_id:
                 device = dev
+        if device is not None :
+            sensor_msg = Queue.Queue()
 
-        # we add 5% to the timeout as some operations may be done in the plugin and so the interval is not totally exact
-        timeout = timeout*1.05
+            # we add 5% to the timeout as some operations may be done in the plugin and so the interval is not totally exact
+            timeout = timeout*1.05
 
-        # Bacause of the TestPlugin component, we can't use the MQAsyncSub class here...
-        # So we will do a manual loop thanks to MQSyncSub
-        # To avoid eternal waiting for a not send message, we catch also the plugin.status messages that occurs each
-        # 15s but we don't process them
+            # Bacause of the TestPlugin component, we can't use the MQAsyncSub class here...
+            # So we will do a manual loop thanks to MQSyncSub
+            # To avoid eternal waiting for a not send message, we catch also the plugin.status messages that occurs each
+            # 15s but we don't process them
 
-        do_loop = True
-        time_start = time.time()
-        while do_loop:
-            cli = MQSyncSub(zmq.Context(), "test", ["client.sensor", "plugin.status"])
-            resp = cli.wait_for_event()
-            # client.sensor message
-            if resp['id'].startswith("client.sensor"):
-                res = json.loads(resp['content'])
-                print("MQ client.sensor message received. Data = {0}".format(res))
+            Printc.info(u"{0} : Start listening to MQ for device {1} data {2} with timeout {3}s ...".format(datetime.now(), device_id, data, timeout))
+            do_loop = True
+            time_start = time.time()
+            sensors_ok = {k:False for k in data.keys()}
+            self._waitTerminated = False
+            Thread(None, self._listenMQ, "listenSensorMQ", (sensor_msg, ), {}).start()
+            while do_loop:
+                try :
+                    resp = sensor_msg.get(timeout=2)
+                except Queue.Empty:
+                   pass
+                else :
+                    # client.sensor message
+                    if resp['id'].startswith("client.sensor"):
+                        res = json.loads(resp['content'])
+                        Printc.info("    MQ client.sensor message received. Data = {0}".format(res))
+                        # compare sensors values
+                        for s_id in res :
+                            ok = False
+                            for key in data:
+                                # find sensor id
+                                for a_sensor in device['sensors']:
+                                    if key == a_sensor:
+                                        sensor_id = str(device['sensors'][a_sensor]['id'])
+                                        if s_id == sensor_id :
+                                            Printc.infob(u"        {0} ({1}) vs {2} ({3})".format(res[s_id], type(res[s_id]), data[key], type(data[key])))
+                                            if res[s_id] == data[key]:
+                                                sensors_ok[key] = True
+                                                ok = True
+                                                Printc.success(u"{0} : Sensor {1} received good value".format(datetime.now(), key))
+                                                break
+                                if ok: break
+                        if all(sensors_ok.values()) :
+                            self._waitTerminated = True
+                            return True
 
-                # check if this is the waited message...
-
-                # compare sensors values
-                sensors_id = {}
-                is_ok = True
-                for key in data:
-                    # find sensor id
-                    for a_sensor in device['sensors']:
-                        if key == a_sensor:
-                            sensor_id = str(device['sensors'][a_sensor]['id'])
-                            print("{0} vs {1}".format( res[sensor_id], data[key]))
-                            if res[sensor_id] != data[key]:
-                                is_ok = False
-
-                if is_ok:
-                    return True
-
-                # if this was not the waited message...
-                # check timeout
-                if time.time() - time_start > timeout:
-                    raise RuntimeError("No MQ message received before the timeout reached")
-            # plugin.status message
-            else:
-                # check timeout
-                #print(time.time() - time_start)
-                if (time.time() - time_start) > timeout:
-                    raise RuntimeError("No MQ message received before the timeout reached")
-
-
-
-
+                        # if this was not the waited message...
+                        # check timeout
+                        if time.time() - time_start > timeout:
+                            Printc.warn(u"{0} : No MQ message received before the timeout reached".format(datetime.now()))
+                            self._waitTerminated = True
+                            raise RuntimeError("No MQ message received before the timeout reached")
+                    # plugin.status message
+                    else:
+                        # check timeout
+                        #Printc.info(time.time() - time_start)
+                        if (time.time() - time_start) > timeout:
+                            Printc.warn(u"{0} : No MQ message received before the timeout reached".format(datetime.now()))
+                            self._waitTerminated = True
+                            raise RuntimeError("No MQ message received before the timeout reached")
+        else :
+            raise RuntimeError(u"Don't find device <{0}> in domogik list. Abording listening MQ message". format(device_id))
+            self._waitTerminated = True
+        self._waitTerminated = True
         return False
 
+    def _listenMQ(self, q):
+        cli = MQSyncSub(zmq.Context(), "test", ["client.sensor", "plugin.status"])
+        while not self._waitTerminated :
+                resp = cli.wait_for_event()
+                q.put(resp)
+
     def on_message(self, msg_id, content):
-        print("MQ => {0}".format(msg_id))
+        Printc.info("MQ => {0}".format(msg_id))
 
 
     ### xpl tools
@@ -165,7 +187,7 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
         self._xpl_received.wait(timeout)
         if not self._xpl_received.is_set():
             raise RuntimeError("No xPL message received")
-        print(u"xPL message received : {0}".format(self.xpl_data))
+        Printc.success(u"xPL message received : {0}".format(self.xpl_data))
         # remove the listener
         listener.unregister()
         return True
@@ -188,13 +210,14 @@ class TemplateTestCase(unittest.TestCase):   #, MQAsyncSub):
             @param delta_to_check : interval required (difference of 2 datatime.now()
         """
         delta_seconds = delta_to_check.total_seconds()
-        print(u"Compare the delta of {0} seconds to the required interval of {1} seconds".format(delta_seconds, interval))
+        Printc.info(u"Compare the delta of {0} seconds to the required interval of {1} seconds".format(delta_seconds, interval))
         diff = abs(delta_seconds - interval)
         five_percent_of_interval = 0.05 * interval
         if diff > five_percent_of_interval:
+            Printc.err("There is a difference of {0} seconds between the required interval and the measured time. This is more than 5% of the required interval (5% = {1} seconds)".format(diff, five_percent_of_interval))
             raise RuntimeError("There is a difference of {0} seconds between the required interval and the measured time. This is more than 5% of the required interval (5% = {1} seconds)".format(diff, five_percent_of_interval))
         else:
-            print(u"There is a difference of {0} seconds between the required interval and the measured time. This is less than 5% of the required interval (5% = {1} seconds)".format(diff, five_percent_of_interval))
+            Printc.success(u"There is a difference of {0} seconds between the required interval and the measured time. This is less than 5% of the required interval (5% = {1} seconds)".format(diff, five_percent_of_interval))
             return True
 
 

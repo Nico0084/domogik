@@ -54,7 +54,7 @@ class CronSystem():
 
     def run(self):
         self.log.info(u"START Cron system run")
-        self._migrate_sensor()
+#        self._migrate_sensor()
         self._delete_devices()
         self.log.info(u"END   Cron system run")
 

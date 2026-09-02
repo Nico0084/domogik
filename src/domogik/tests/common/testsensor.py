@@ -34,8 +34,8 @@ Usage
 """
 
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-from domogik.common.utils import get_rest_url
+
+from domogik.common.utils import get_rest_url, get_rest_ssl
 from domogik.common.utils import get_sanitized_hostname
 import requests
 import json
@@ -53,7 +53,9 @@ class TestSensor():
             @param sensor_reference : sensor reference
         """
         # rest url
+        # With ssl activate the private key to your local certificate must be unencrypted. Currently, Requests.get does not support using encrypted keys. So verify is set to False by default
         self.rest_url = get_rest_url()
+        self.rest_ssl = get_rest_ssl()
 
         # package informations
         self.device_id = device_id
@@ -69,29 +71,19 @@ class TestSensor():
         """
         print(u"Get the sensor id for device_id={0}, sensor_reference={1}".format(self.device_id, self.sensor_reference))
         response = requests.get("{0}/device/{1}".format(self.rest_url, self.device_id), \
-                                 headers={'content-type':'application/x-www-form-urlencoded'})
+                                 headers={'content-type':'application/x-www-form-urlencoded'}, verify=False)
         print(u"Response : [{0}]".format(response.status_code))
         #print(u"Response : [{0}] {1}".format(response.status_code, response.text))
         if response.status_code != 200:
             raise RuntimeError("Error when looking for the sensor id")
 
-        # get the sensor id 
+        # get the sensor id
         device = json.loads(response.text)
         if not device['sensors'].has_key(self.sensor_reference):
             raise RuntimeError("There is no sensor named '{0}' for the device id {1}".format(self.sensor_reference, self.device_id))
         sensor_id = device['sensors'][self.sensor_reference]['id']
-
-        # TODO  : nico's proposal that doesn't work :). To delete after checking with him what he wanted to do...
-        #sensor_id = False
-        #for sensor in device['sensors'] :
-        #    if device['sensors'][sensor]['name'] == self.sensor_name:
-        #        sensor_id = device['sensors'][sensor]['id']
-        #        break
-        #if not sensor_id:
-        #     raise RuntimeError("There is no sensor named '{0}' for the device id {1}".format(self.sensor_name, self.device_id))
         print(u"The sensor id is '{0}'".format(sensor_id))
         return sensor_id
-
 
     def get_last_value(self):
         """ Call GET /sensor/<id> to get the last value of the sensor
@@ -101,7 +93,7 @@ class TestSensor():
         print(u"(but before, wait for 1s to be sure the value has been inserted in database...)")
         time.sleep(1)
         response = requests.get("{0}/sensor/{1}".format(self.rest_url, self.sensor_id), \
-                                 headers={'content-type':'application/x-www-form-urlencoded'})
+                             headers={'content-type':'application/x-www-form-urlencoded'}, verify=False)
         print(u"Response : [{0}]".format(response.status_code))
         #print(u"Response : [{0}] {1}".format(response.status_code, response.text))
         if response.status_code != 200:
@@ -115,7 +107,7 @@ class TestSensor():
         return (timestamp, value)
 
 
-        
+
 
 
 if __name__ == "__main__":

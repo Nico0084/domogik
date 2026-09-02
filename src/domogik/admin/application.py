@@ -348,6 +348,7 @@ from domogik.admin.views.camera import *
 from domogik.admin.views.datatypes import *
 from domogik.admin.views.locations import *
 from domogik.admin.views.config import *
+from domogik.admin.views.scenario_geoloctest_demo import *
 from domogik.admin.views.client_advanced_empty import *
 
 ### dev/debug urls

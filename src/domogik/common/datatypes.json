@@ -133,6 +133,7 @@
             "DT_barPressure",
             "DT_Humidity",
             "DT_AirQuality",
+            "DT_Ultraviolet",
             "DT_Volt",
             "DT_mVolt",
             "DT_kVolt",
@@ -283,6 +284,15 @@
         "min": null,
         "max": null,
         "unit": "ppm",
+        "parent": "DT_Number",
+        "childs": []
+    },
+    "DT_Ultraviolet": {
+        "usage" : "Ultraviolet can be used for sensors that measure the ultraviolet radiation index.",
+        "example" : "0 to 16",
+        "min": 0,
+        "max": 16,
+        "unit": "UV",
         "parent": "DT_Number",
         "childs": []
     },

@@ -36,11 +36,10 @@ Usage
 from __future__ import absolute_import, division, print_function, unicode_literals
 from domogik.common.utils import get_sanitized_hostname
 from domogik.tests.common.templatetestcase import TemplateTestCase
-from domogik.tests.common.helpers import check_domogik_is_running
-from domogik.tests.common.helpers import delete_configuration
-from domogik.tests.common.helpers import configure, check_config
+from domogik.tests.common.helpers import *
 from domogik.tests.common.testplugin import TestPlugin
 from domogik.common.plugin import STATUS_ALIVE, STATUS_STOPPED
+from domogik.xpl.common.plugin import XplPlugin
 import time
 
 
@@ -49,17 +48,17 @@ class PluginTestCase(TemplateTestCase):
     """
 
     # this function is the same for all plugins
-    def __init__(self, testname, xpl_plugin, name, configuration):
+    def __init__(self, testname, plugin, name, configuration):
         """ Constructor
             @param testname : used by unittest to choose the test to launch
-            @param xpl_plugin : an instance of XplPlugin to allow to use xPL features 
+            @param xpl_plugin : an instance of XplPlugin to allow to use xPL features or instance Plugin if 0MQ version
             @param name : name of the plugin we are testing
             @param configuration : dict containing the plugin configuration
         """
         #super(PluginTestCase, self).__init__(testname)
         super(PluginTestCase, self).__init__(testname)
         #TemplateTestCase.__init__(self)
-        self.myxpl = xpl_plugin.myxpl
+        self.myxpl = plugin.myxpl if type(plugin) == XplPlugin else None
         self.name = name
         self.configuration = configuration
 
@@ -70,13 +69,13 @@ class PluginTestCase(TemplateTestCase):
     # this function is the same for all plugins
     def test_0010_configure_the_plugin(self):
         # first, clean the plugin configuration
-        print(u"Delete the current plugin configuration")
+        Printc.header(u"Delete the current plugin configuration")
         self.assertTrue(delete_configuration("plugin", self.name, get_sanitized_hostname()))
         for key in self.configuration:
-            print(u"Set up configuration : {0} = {1}".format(key, self.configuration[key]))
+            Printc.infob(u"Set up configuration : {0} = {1}".format(key, self.configuration[key]))
             self.assertTrue(configure("plugin", self.name, get_sanitized_hostname(), key, self.configuration[key]))
         for key in self.configuration:
-            print(u"Validate the configuration : {0} = {1}".format(key, self.configuration[key]))
+            Printc.success(u"Validate the configuration : {0} = {1}".format(key, self.configuration[key]))
             self.assertTrue(check_config("plugin", self.name, get_sanitized_hostname(), key, self.configuration[key]))
 
     # this function is the same for all plugins
@@ -86,25 +85,27 @@ class PluginTestCase(TemplateTestCase):
     # this function is the same for all plugins
     def test_0050_start_the_plugin(self):
         tp = TestPlugin(self.name, get_sanitized_hostname())
-        self.assertTrue(tp.request_startup())
+        timeOut = 20
+        Printc.header(u"Try to start plugin {0}. Timeout set to {1} sec ...".format(self.name, timeOut))
+        self.assertTrue(tp.request_startup(timeOut))
         self.assertTrue(tp.wait_for_event(STATUS_ALIVE))
         # just wait 1 second to get clearer logs
         time.sleep(5)
 
     # this function is the same for all plugins
     def test_9900_hbeat(self):
-        print(u"Check that a heartbeat is sent. This could take up to 5 minutes.")
-        self.assertTrue(self.wait_for_xpl(xpltype = "xpl-stat", 
-                                          xplschema = "hbeat.app", 
+        Printc.info(u"Check that a heartbeat is sent. This could take up to 5 minutes.")
+        self.assertTrue(self.wait_for_xpl(xpltype = "xpl-stat",
+                                          xplschema = "hbeat.app",
                                           xplsource = "domogik-{0}.{1}".format(self.name, get_sanitized_hostname()),
                                           timeout = 600))
-    
+
     # this function is the same for all plugins
     def test_9990_stop_the_plugin(self):
         tp = TestPlugin(self.name, get_sanitized_hostname())
         tp.request_stop()
         self.assertTrue(tp.wait_for_event(STATUS_STOPPED))
-    
+
     def configure(self):
         raise NotImplementedError
 

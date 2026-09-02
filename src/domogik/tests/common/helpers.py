@@ -42,6 +42,45 @@ from domogikmq.message import MQMessage
 
 ### Common features
 
+### Color print
+class Printc(object):
+
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = "\033[1m"
+
+    @classmethod
+    def printColor(cls, color, msg):
+        print(u"{0}{1}{2}".format(color, msg, cls.ENDC))
+
+    @classmethod
+    def info(cls, msg):
+        print(msg)
+
+    @classmethod
+    def header(cls, msg):
+        cls.printColor(cls.HEADER, msg)
+
+    @classmethod
+    def infob(cls, msg):
+        cls.printColor(cls.OKBLUE, msg)
+
+    @classmethod
+    def success(cls, msg):
+        cls.printColor(cls.OKGREEN, msg)
+
+    @classmethod
+    def warn(cls, msg):
+        cls.printColor(cls.WARNING, msg)
+
+    @classmethod
+    def err(cls, msg):
+        cls.printColor(cls.FAIL, msg)
+
 def ask(question):
     """ Ask the suer for something and return True (y/Y) or False (n/N)
         @param question : question displayed
