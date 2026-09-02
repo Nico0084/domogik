@@ -46,12 +46,13 @@ import sys
 
 import json
 import sqlalchemy
-from sqlalchemy import Table, MetaData, and_, or_, not_, desc
+from sqlalchemy import Table, MetaData, text, and_, or_, not_, desc
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import func, extract
 from sqlalchemy.orm import sessionmaker, defer, scoped_session, joinedload
 from sqlalchemy.orm.session import make_transient
 from sqlalchemy.pool import QueuePool
+
 #from sqlalchemy.cprocessors import str_to_datetime
 from domogik.common.utils import ucode, get_sanitized_hostname
 from domogik.common import logger
@@ -97,7 +98,7 @@ def _make_crypted_password(clear_text_password):
 
     """
     password = hashlib.sha256()
-    password.update(clear_text_password)
+    password.update(clear_text_password.encode('utf8'))
     return password.hexdigest()
 
 def _datetime_string_from_tstamp(ts):
@@ -173,7 +174,7 @@ class DbHelper(object):
         if use_cache :
             CacheDB.register('get_cache')
             port_c = 40409 if not 'portcache' in self.__db_config else int(self.__db_config['portcache'])
-            m = CacheDB(address=('localhost', port_c), authkey=b'{0}'.format(self.__db_config['password']))
+            m = CacheDB(address=('localhost', port_c), authkey='{0}'.format(self.__db_config['password']).encode('utf-8'))
             m.connect()
             self.log.info(u"New client connected to memory cache : {0}".format(self._owner))
             self._cacheDB = m.get_cache()
@@ -198,7 +199,7 @@ class DbHelper(object):
             if engine != None:
                 DbHelper.__engine = engine
             else:
-                DbHelper.__engine = sqlalchemy.create_engine(url, echo = echo_output, encoding='utf8',
+                DbHelper.__engine = sqlalchemy.create_engine(url, echo = echo_output,
                                                              pool_recycle=pool_recycle, pool_size=20, max_overflow=10)
         if DbHelper.__session_object == None:
             DbHelper.__session_object = scoped_session(sessionmaker(bind=DbHelper.__engine, autoflush=True, expire_on_commit=False))
@@ -334,6 +335,9 @@ class DbHelper(object):
         for item in core_plugin :
             listC.append(item.id)
         self.log.debug(u"get core config : {0}".format(listC))
+        if listC == []:
+            self.log.debug(u"No core plugin ref !. Create it.")
+            listC.append(self._add_plugin(u'core', u'core', get_sanitized_hostname()).id)
         cfg = self.__session.query(PluginConfig).filter_by(plugin_id=listC).all()
         if key == None:
             res = {}
@@ -353,7 +357,7 @@ class DbHelper(object):
         listC = []
         for item in core_plugin :
             listC.append(item.id)
-        self.log.debug(u"set core config: {0}".format(listC))
+        self.log.debug(u"set core config : listC={0}".format(listC))
         config_list = self.__session.query(PluginConfig).filter_by(plugin_id=listC).all()
         for plc in config_list:
             self.__session.delete(plc)
@@ -382,6 +386,8 @@ class DbHelper(object):
         listP = []
         for item in plugins :
             listP.append(item.id)
+        if listP == []:
+            return []
         cfg =  self.__session.query(
                 PluginConfig
                     ).filter_by(plugin_id=listP
@@ -404,6 +410,7 @@ class DbHelper(object):
         @return a PluginConfigData object
 
         """
+        ret = []
         if self._cacheDB and self._cacheDB.upToDateConfig(pl_id, pl_hostname) :
             return self._cacheDB.getConfig(pl_id, pl_hostname, pl_key)
         try:
@@ -414,6 +421,8 @@ class DbHelper(object):
             listP = []
             for item in plugins :
                 listP.append(item.id)
+            if listP == []:
+                return []
             cfg =  self.__session.query(
                     PluginConfig
                         ).filter_by(plugin_id=listP
@@ -557,11 +566,8 @@ class DbHelper(object):
                     ).order_by(PluginHistory.date.desc()
                     ).limit(2).all()
             ### Do check about incremental to calculate the value to store
-            if date is None :
-                date = datetime.datetime.now()
-            else :
-                date = datetime.datetime.fromtimestamp(date)
-            if (len(last2) == 2) and ((last2[0].status == last2[1].status == ucode(pl_status)) and (last2[0].comment == last2[1].comment == ucode(pl_comment))) :
+            date = datetime.datetime.now() if date is None else datetime.datetime.fromtimestamp(date)
+            if (len(last2) == 2) and ((last2[0].status == last2[1].status == pl_status) and (last2[0].comment == last2[1].comment == pl_comment)) :
                     # update only date
                     self.__session.query(PluginHistory).filter_by(id=last2[0].id).update({'date' : date})
 #                    self.log.debug(u"Client {0} history same status, only update date : {1}".format(pl_id, date))
@@ -1501,8 +1507,8 @@ class DbHelper(object):
         }
         self.log.debug(u"Query sensor {0} history filter : {1}".format(sid, sql_query))
         if self.get_db_type() in ('mysql', 'postgresql'):
-            cond_min = "date >= '" + _datetime_string_from_tstamp(frm) + "'"
-            cond_max = "date < '" + _datetime_string_from_tstamp(to) + "'"
+            cond_min = text("date >= '{0}'".format(_datetime_string_from_tstamp(frm)))
+            cond_max = text("date < '{0}'".format(_datetime_string_from_tstamp(to)))
 #            cond_min = "date >= STR_TO_DATE('" + _datetime_string_from_tstamp(frm) + "','%Y-%m-%d %H:%i:%s')"
 #            cond_max = "date < STR_TO_DATE('" + _datetime_string_from_tstamp(to) + "','%Y-%m-%d %H:%i:%s')"
             query = sql_query[step_used][self.get_db_type()]
@@ -1782,9 +1788,9 @@ class DbHelper(object):
         user_account = self.add_user_account(a_login=default_user_account_login, a_person_id=person.id, a_password='123',
                                      a_is_admin=True, a_lock_delete=True)
 
-        person = self.add_person(p_first_name='Rest', p_last_name='Anonymous',
+        person = self.add_person(p_first_name=u'Rest', p_last_name=u'Anonymous',
                                  p_birthdate=datetime.date(1900, 1, 1))
-        user_account = self.add_user_account(a_login='Anonymous', a_person_id=person.id, a_password='Anonymous',
+        user_account = self.add_user_account(a_login=u'Anonymous', a_person_id=person.id, a_password=u'Anonymous',
                                      a_is_admin=False, a_lock_delete=True, a_lock_edit=True)
         return user_account
 
@@ -2283,9 +2289,9 @@ class DbHelper(object):
                                     SensorHistory.date,
                                     SensorHistory.value_str
                              ) \
+                             .join(Sensor, Device.id == Sensor.device_id) \
+                             .join(SensorHistory, Sensor.id == SensorHistory.sensor_id) \
                              .filter(Device.id == device_id) \
-                             .join(Sensor) \
-                             .join(SensorHistory) \
                              .order_by(SensorHistory.date.desc()) \
                              .limit(100)
         elif client_id:
@@ -2299,12 +2305,11 @@ class DbHelper(object):
                                     SensorHistory.date,
                                     SensorHistory.value_str
                              ) \
+                             .join(Sensor, Device.id == Sensor.device_id) \
+                             .join(SensorHistory, Sensor.id == SensorHistory.sensor_id) \
                              .filter(Device.client_id == client_id) \
-                             .join(Sensor) \
-                             .join(SensorHistory) \
                              .order_by(SensorHistory.date.desc()) \
                              .limit(100)
-
         else:
             return self.__session.query(
                                     Device.name,
@@ -2316,8 +2321,8 @@ class DbHelper(object):
                                     SensorHistory.date,
                                     SensorHistory.value_str
                              ) \
-                             .join(Sensor) \
-                             .join(SensorHistory) \
+                             .join(Sensor, Device.id == Sensor.device_id) \
+                             .join(SensorHistory, Sensor.id == SensorHistory.sensor_id) \
                              .order_by(SensorHistory.date.desc()) \
                              .limit(100)
 

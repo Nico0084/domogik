@@ -65,8 +65,8 @@ Implements
 - XplTimer.__init__(self, time, cb, stop)
 - XplTimer.run(self)
 
-@author: Maxence Dunnewind <maxence@dunnewind.net>
-@copyright: (C) 2007-2012 Domogik project
+@author: Maxence Dunnewind <maxence@dunnewind.net>; Nico0084 <Nico84dev@gmail.com>
+@copyright: (C) 2007-2019 Domogik project
 @license: GPL(v3)
 @organization: Domogik
 """
@@ -76,13 +76,10 @@ import select
 import threading
 import traceback
 import random
-#from socket import socket, gethostbyname, gethostname, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
-#from domogik.common import logger
-#from domogik.common.baseplugin import BasePlugin
+from domogik.common.utils import Timer
 from domogik.xpl.common.xplmessage import XplMessage, FragmentedXplMessage
 from domogik.common.dmg_exceptions import XplMessageError
-import time
 import uuid
 from domogik.common.utils import get_ip_for_interfaces
 
@@ -196,7 +193,7 @@ class Manager:
                             % (self.p.get_plugin_name(), self._ip, self._port))
             self._h_timer = None
 
-      
+
             if self._nohub_mandatory == True:
                 # no xPL hub is requested for the plugin to start by the developper
                 # This means that we don't search for a xPL hub...
@@ -204,7 +201,7 @@ class Manager:
                 # be seen by a hub, if there is a hub :)
                 self.p.log.info("Plugin configure to have the xPL hub as optionnal! The hub won't be searched but a hbeat message will be sent each 5 minutes")
                 self._SendHeartbeat()
-                self._h_timer = XplTimer(60 * STATUS_HBEAT_XPL, self._SendHeartbeat, self)
+                self._h_timer = XplTimer(60 * STATUS_HBEAT_XPL, self._SendHeartbeat, self.p)
                 self._h_timer.start()
 
             else:
@@ -213,7 +210,7 @@ class Manager:
                 self.p.log.info("Plugin configure to have the xPL hub as mandatory!")
                 msg = "HUB discovery > starting"
                 self.p.log.info(msg)
-    
+
                 self._SendHeartbeat()
 
             #And finally we start network listener in a thread
@@ -241,7 +238,7 @@ class Manager:
             #self.p.log.info(msg)
             # random send hbeat (between 3 and 10 seconds)
             rnd = random.randrange(3, 10)
-            self._h_timer = XplTimer(rnd, self._SendHeartbeat, self)
+            self._h_timer = XplTimer(rnd, self._SendHeartbeat, self.p)
             self._h_timer.start()
 
     def foundhub(self):
@@ -263,7 +260,7 @@ class Manager:
         self.update_status(2)
         if lock:
             self.p.log.debug("Hbeat : Wait for stop flag")
-            self.get_stop().wait() 
+            self.get_stop().wait()
 
     def update_status(self, setto):
         """ Update internal plugin status
@@ -308,7 +305,7 @@ class Manager:
                         self._UDPSock.sendto(fragments[fragment].__str__(), (self._broadcast, 3865))
                 else:
                     self.p.log.debug("normal send")
-                    self._UDPSock.sendto(message.__str__(), (self._broadcast, 3865))
+                    self._UDPSock.sendto(str(message).encode("utf-8"), (self._broadcast, 3865))
             except:
                 if self.p.get_stop().is_set():
                     pass
@@ -457,7 +454,7 @@ class Listener:
         called with the message as parameter
         @param cb : the callback function
         @param manager : the manager instance
-        @param filter : dictionnary { key : value }. If value is a list, then the 
+        @param filter : dictionnary { key : value }. If value is a list, then the
         listener will check if the key equals any of these values
         """
         self.uuid = str(uuid.uuid1())
@@ -510,7 +507,7 @@ class Listener:
         if ok:
             self._manager.p.log.debug("Message match for listener {0}".format(self.uuid))
             try:
-                if self._cb_params != {} and self._callback.func_code.co_argcount > 1:  
+                if self._cb_params != {} and self._callback.func_code.co_argcount > 1:
                     thread = threading.Thread(target=self._callback, args = (message, self._cb_params), name="Manager-new-message-cb-%s" % suffixe)
                 else:
                     thread = threading.Thread(target=self._callback, args = (message,), name="Manager-new-message-cb-%s" % suffixe)
@@ -552,86 +549,8 @@ class XPLException(Exception):
     def __str__(self):
         return self.repr(self.value)
 
-
-class XplTimer():
+class XplTimer(Timer):
     """
-    XplTimer will call a callback function each n seconds
+    Duplicate class to preserve plugin compatibility.
+    @Deprecate, now use Timer class from domogik.common.utils
     """
-#    _time = 0
-#    _callback = None
-#    _timer = None
-
-    def __init__(self, time, cb, manager):
-        """
-        Constructor : create the internal timer
-        @param time : time of loop in second
-        @param cb : callback function which will be call eact 'time' seconds
-        """
-        self._stop = threading.Event()
-        self._timer = self.__InternalTimer(time, cb, self._stop, manager.p.log)
-        self._manager = manager
-        self.log = manager.p.log
-        manager.p.register_timer(self)
-        manager.p.register_thread(self._timer)
-        self.log.debug(u"New timer created : %s " % self)
-
-#    def __repr__(self):
-#        """ Representation of the Timer
-#        """
-#        return "<domogik.xpl.lib.xplconnector.XplTimer> name : %s" % self._timer.name
-
-    def start(self):
-        """
-        Start the timer
-        """
-        self._timer.start()
-
-    def get_stop(self):
-        """ Returns the threading.Event instance used to stop the XplTimer
-        """
-        return self._stop
-
-    def get_timer(self):
-        """
-        Waits for the internal thread to finish
-        """
-        return self._timer
-
-    def __del__(self):
-        self.log.debug(u"__del__ Manager")
-        self.stop()
-
-    def stop(self):
-        """
-        Stop the timer
-        """
-        self.log.debug(u"Timer : stop, try to join() internal thread")
-        self._stop.set()
-        self._timer.join()
-        self.log.debug(u"Timer : stop, internal thread joined, unregister it")
-        self._manager.p.unregister_timer(self._timer)
-
-    class __InternalTimer(threading.Thread):
-        '''
-        Internal timer class
-        '''
-        def __init__(self, time, cb, stop, log):
-            '''
-            @param time : interval between each callback call
-            @param cb : callback function
-            @param stop : Event to check for stop thread
-            '''
-            threading.Thread.__init__(self)
-            self._time = time
-            self._cb = cb
-            self._stop = stop
-            self.name = "internal-timer"
-            self.log = log
-
-        def run(self):
-            '''
-            Call the callback every X seconds
-            '''
-            while not self._stop.isSet():
-                self._cb()
-                self._stop.wait(self._time)

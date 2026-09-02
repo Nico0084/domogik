@@ -26,13 +26,8 @@ along with Domogik. If not, see U{http://www.gnu.org/licenses}.
 """
 
 import uuid
-try:
-    from exceptions import ValueError
-except:
-    pass
 from domogikmq.reqrep.client import MQSyncReq
 from domogikmq.message import MQMessage
-from domogik.common.logger import Logger
 from domogik.common.utils import remove_accents
 from domogikmq.pubsub.subscriber import MQAsyncSub
 import zmq
@@ -41,8 +36,6 @@ import logging
 import time
 from threading import Thread, Event, currentThread
 import ast
-import datetime
-from dateutil import parser
 from domogik.common.utils import ucode
 
 def to_unicode(data):
@@ -99,7 +92,7 @@ class ScenarioInstance(MQAsyncSub):
         # TODO : fix for Russian names for example
         #self._log = log.getChild(remove_accents(name))
         try:
-            self._log = log.getChild(ucode(remove_accents(name)).encode('utf-8'))
+            self._log = log.getChild(remove_accents(name))
         except UnicodeDecodeError:
             self._log = log.getChild("SCENARIO")
             self._log.warning("The scenario name encountered an unicode error while trying to set the log line header with the scenario name. The scenario name will not be put in the log line. It will be replaced by 'SCENARIO'")
@@ -475,7 +468,7 @@ class ScenarioInstance(MQAsyncSub):
                 self._waitEval = True
                 self._log.info(u"Wait end of current eval and restart a new.")
                 self._stopWaitEval.clear()
-                while not self._stopWaitEval.isSet() :
+                while not self._stopWaitEval.is_set() :
                     time.sleep(0.1)
                 self._waitEval = False
             elif self._behavior == 'eval': # Stop current and do next

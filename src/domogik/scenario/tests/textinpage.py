@@ -68,7 +68,7 @@ if __name__ == "__main__":
     p = TEST.get_parameters()
     print(p)
     print("Trying to evaluate : {0}".format(TEST.evaluate()))
-    print "set data for parameters"
+    print("set data for parameters")
     data = { "url": { "urlpath" : "http://people.dunnewind.net/maxence/domogik/test.txt",
                     "interval": "5"
     },

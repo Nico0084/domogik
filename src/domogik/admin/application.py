@@ -8,9 +8,9 @@ import zmq
 from functools import wraps
 from flask import Flask, g, request, session, Response
 try:
-    from flask_wtf import Form, RecaptchaField
+    from flask_wtf import FlaskForm, RecaptchaField
 except ImportError:
-    from flaskext.wtf import Form, RecaptchaField
+    from flaskext.wtf import FlaskForm, RecaptchaField
     pass
 try:
     from flask_login import LoginManager, current_user
@@ -44,7 +44,7 @@ except ImportError:
     from flask.ext.session import Session
     pass
 from werkzeug.exceptions import Unauthorized
-from werkzeug import WWWAuthenticate
+from werkzeug.datastructures  import WWWAuthenticate
 from domogik.common.database import DbHelper
 from domogik.common.configloader import Loader as dmgLoader
 from domogik.common.plugin import PACKAGES_DIR, RESOURCES_DIR, PRODUCTS_DIR
@@ -115,6 +115,11 @@ login_manager.init_app(app)
 
 babel = Babel()
 babel.init_app(app)
+TRANSLATIONS = {
+    'en':' English',
+    'fr': 'Français',
+    'nl_BE': 'Flemish'
+    }
 
 Themes(app, app_identifier='domogik-admin')
 
@@ -131,8 +136,21 @@ def format_babel_datetime(value, format='medium'):
 def sort_by_id(value):
     return sorted(value.items(), key=lambda x: x[1]['id'])
 
+def get_languages(value):
+    return TRANSLATIONS
+
+def current_languages(value):
+    lang = request.cookies.get('dmg_language')
+    if lang is not None and lang in TRANSLATIONS :
+        return lang
+    translations = [str(translation) for translation in babel.list_translations()]
+    return request.accept_languages.best_match(translations)
+
+
 app.jinja_env.filters['datetime'] = format_babel_datetime
 app.jinja_env.filters['sortid'] = sort_by_id
+app.jinja_env.filters['languages'] = get_languages
+app.jinja_env.filters['currentlocal'] = current_languages
 
 # create acces_log
 @app.after_request
@@ -152,7 +170,7 @@ def inject_global_errors():
     err = []
     with app.db.session_scope():
         # TODO : review this part by checking only for the mandatory fields
-        if len(app.db.get_core_config()) != 5:
+        if len(app.db.get_core_config()) != 6:
             err.append(('Not all config set, you should first set the basic config','/config'))
 
         if len(app.db.list_devices(d_state=u'upgrade')) > 0:
@@ -291,14 +309,14 @@ def jsonp_response(action_func):
 ### error pages
 @app.errorhandler(404)
 def page_not_found(e):
-    if u''.join(request.path).encode('utf-8').startswith('/rest/'):
+    if ''.join(request.path).startswith('/rest/'):
         return render_template('404_json.html'), 404
     else:
         return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    if u''.join(request.path).encode('utf-8').startswith('/rest/'):
+    if ''.join(request.path).startswith('/rest/'):
         return render_template('500_json.html'), 500
     else:
         return render_template('500.html'), 500

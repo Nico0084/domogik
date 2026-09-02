@@ -36,7 +36,6 @@ Implements
 
 import threading
 from argparse import ArgumentParser
-from domogik.common.utils import get_sanitized_hostname
 import sys
 import os
 import pwd
@@ -152,15 +151,15 @@ class BasePlugin(object):
             sys.exit(0)
         elif not self.options.run_in_foreground and daemonize:
             self.log.info(u"Starting the plugin in background...")
-            ctx = DaemonContext()
-            #ctx = daemon.DaemonContext()
-            ctx.files_preserve = logg.get_fds([name])
-            ctx.open()
-            self.log.info(u"Daemonize plugin {0}".format(name))
-            self.is_daemon = True
+            try:
+                ctx = DaemonContext()
+                ctx.files_preserve = logg.get_fds([name])
+                ctx.open()
+                self.log.info(u"Daemonize plugin {0}".format(name))
+                self.is_daemon = True
+            except:
+                 self.log.error(u"Daemonize fail : {1}".format(traceback.format_exc()))
         else:
-            #l = logger.Logger(name)
-            #self.log = l.get_logger()
             self.is_daemon = False
         if self.options.run_in_foreground :
             self._st_comment =u"Starting by shell in background"
@@ -172,7 +171,7 @@ class BasePlugin(object):
         Check if the plugin should stop
         This method should be called to check loop condition in threads
         '''
-        return self._stop.isSet()
+        return self._stop.is_set()
 
     def get_stop(self):
         '''
@@ -202,7 +201,7 @@ class BasePlugin(object):
         # self.log.debug('New thread registered : {0}'.format(thread))
         #Remove all stopped thread from the list
         for thread in self._threads:
-            if not  thread.isAlive():
+            if not  thread.is_alive():
                 self._threads.remove(thread)
         if thread in self._threads:
             self.log.info(u"Try to register a thread twice: {0}".format(thread))

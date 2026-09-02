@@ -1,12 +1,12 @@
-#!/bin/bash -e 
+#!/bin/bash -e
 # The -e option will make the bash stop if any command raise an error ($? != 0)
 
-source /home/travis/virtualenv/python2.7/bin/activate
-
-# AS of 7/01/2015 this should not be needed anymore
-#/etc/init.d/domogik-mq start
 #sleep 10
-/etc/init.d/domogik start
+echo "==== START DOMOGIK"
+# notice : we use <env> with set PATH because a virtualenv is used in Travis.
+# If we don't set these flags, these actions will fail,
+# the python packages (domogik) in virtualenv won't be find!
+sudo env "PATH=$PATH VIRTUAL_ENV=$VIRTUAL_ENV" /etc/init.d/domogik start
 sleep 10
 cat /var/log/domogik/core_manager.log
 

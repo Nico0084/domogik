@@ -56,7 +56,7 @@ class ScenarioFrontend(Plugin):
         while mq_services == None or 'xplgw' not in mq_services:
             mq_services_raw = cli.rawrequest('mmi.services', '', timeout=10)
             if mq_services_raw != None:
-                mq_services = str(mq_services_raw[0]).replace(" ", "").split(",")
+                mq_services = (mq_services_raw[0].decode('utf-8').replace(" ", "")).split(",")
             self.log.info("Checking for MQ service 'xplgw'. Current list is : {0}".format(mq_services))
             if mq_services == None or 'xplgw' not in mq_services:
                 self.log.debug("Needed MQ services 'xplgw' not yet available : waiting")

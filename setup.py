@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """ This file is part of B{Domogik} project (U{http://www.domogik.org}).
@@ -29,7 +29,7 @@ Implements
 
 
 @author: Domogik project
-@copyright: (C) 2007-2012 Domogik project
+@copyright: (C) 2007-2019 Domogik project
 @license: GPL(v3)
 @organization: Domogik
 """
@@ -50,14 +50,14 @@ for mod in dists:
     if ( mod.key == 'magic-file-extensions' ):
         magic = 'magic-file-extensions'
 
-print "******************************************"
-print "use: "+mysql
-print "use: "+magic
-print "******************************************"
+print(u"******************************************")
+print(u"use: {0}".format(mysql))
+print(u"use: {0}".format(magic))
+print(u"******************************************")
 
 setup(
     name = 'Domogik',
-    version = '0.6.0',
+    version = '0.6.5',
     url = 'http://www.domogik.org/',
     description = 'OpenSource home automation software',
     author = 'Domogik team',
@@ -90,7 +90,7 @@ setup(
     classifiers=[
         "Topic :: Home Automation",
         "Environment :: No Input/Output (Daemon)",
-        "Programming Language :: Python",
+        "Programming Language :: Python3",
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

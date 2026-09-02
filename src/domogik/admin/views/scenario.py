@@ -9,9 +9,9 @@ except ImportError:
     pass
 from flask_login import login_required
 try:
-    from flask_wtf import Form
+    from flask_wtf import FlaskForm
 except ImportError:
-    from flaskext.wtf import Form
+    from flaskext.wtf import FlaskForm
     pass
 from wtforms import TextField, HiddenField, ValidationError, RadioField,\
             BooleanField, SubmitField, SelectField, IntegerField, TextAreaField
@@ -140,7 +140,7 @@ def scenario_edit(id):
                 id = 0
                 name = u""
     # create a form
-    class F(Form):
+    class F(FlaskForm):
         sid = HiddenField("id", default=id)
         sname = TextField(gettext("Name"), [Required()], default=name, description=gettext(u"Scenario name"))
         sdis = BooleanField(gettext("Disable"), default=dis, description=gettext(u"Disabling a scenario avoid to delete it if you temporary want it not to run"))
@@ -160,7 +160,7 @@ def scenario_edit(id):
     if request.method == 'POST' and form.validate():
         cli = MQSyncReq(app.zmq_context)
         msg = MQMessage()
-        if form.sid.data > 0:
+        if int(form.sid.data) > 0:
             msg.set_action('scenario.update')
         else:
             msg.set_action('scenario.new')
@@ -218,7 +218,7 @@ def scenario_edit(id):
 def scenario_croncheckdate():
     data = {}
     try :
-        for k, v in request.args.iteritems():
+        for k, v in request.args.items():
             data[k] = v
         data['date'] = tuple ([int(i) for i in data['date'].split(',')])
         try :
@@ -241,7 +241,7 @@ def scenario_croncheckdate():
 def scenario_croncephemdate():
     data = {}
     try :
-        for k, v in request.args.iteritems():
+        for k, v in request.args.items():
             data[k] = v
         data['date'] = tuple ([int(i) for i in data['date'].split(',')])
         try :
@@ -301,7 +301,8 @@ def scenario_blocks_js():
 #   remove cron.CronTest from other sensors list
     del scenario_tests['cron.CronTest']
 
-    tests = scenario_tests.keys()
+#    tests = scenario_tests.keys()
+    tests = list(scenario_tests)
     try:
         tests.remove(u'sensor.SensorTest')
         tests.remove(u'sensor.SensorValueDummy')
@@ -334,7 +335,7 @@ def scenario_blocks_js():
         print(u"Error : no scenario actions found!")
         scenario_actions = {}
 
-    actions = scenario_actions.keys()
+    actions = list(scenario_actions)
     try:
         actions.remove(u'scenario.endis')
     except ValueError:
@@ -448,10 +449,12 @@ def scenario_blocks_js():
 
 
     ### actions
+    print("actions : {0}".format(scenario_actions))
     for act, params in scenario_actions.items():
         if act == "command.CommandAction": continue
         p = []
         jso = u""
+        print("action : {0} = {1}".format(act,  params))
         for par, parv in params['parameters'].items():
             papp = u"this.appendValueInput(\"{0}\").setAlign(Blockly.ALIGN_RIGHT)".format(par)
             papp += u".appendField(\"{0}\")".format(parv['description'])

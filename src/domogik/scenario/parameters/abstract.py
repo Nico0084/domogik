@@ -25,7 +25,6 @@ along with Domogik. If not, see U{http://www.gnu.org/licenses}.
 @organization: Domogik
 """
 
-from exceptions import ValueError, NotImplementedError
 from threading import Thread
 
 class AbstractParameter:

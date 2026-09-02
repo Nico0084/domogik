@@ -53,7 +53,7 @@ class CommandAction(AbstractAction):
         # self.log.debug(u"Params = {0}".format(self._params))
         # Params = {'color1': '#ffff33', 'color2': '#ff0000'}
         for key in self._params:
-	    if type(self._params[key]) is str:
+            if type(self._params[key]) is str:
                 self._params[key] = ucode(self._params[key])
             self.log.debug(u"Command : Preprocess for param : key={0}, typeofvalue={1}, value={2}".format(key, type(self._params[key]), self._params[key]))
             params[key] = self._params[key]
@@ -77,7 +77,7 @@ class CommandAction(AbstractAction):
         msg.add_data('cmdid', self._cmdId)
         msg.add_data('cmdparams', params)
 
-        self.log.debug(u"Command : Command id = '{0}', command params = '{1}'".format(self._cmdId, params)) 
+        self.log.debug(u"Command : Command id = '{0}', command params = '{1}'".format(self._cmdId, params))
         # do the request
         res = cli.request('xplgw', msg.get(), timeout=10)
         if res:

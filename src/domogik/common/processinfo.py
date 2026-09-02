@@ -125,7 +125,7 @@ class ProcessInfo():
         if self.pid == None:
             return
         self._start_time = time.time()
-        while not self._stop.isSet():
+        while not self._stop.is_set():
             self._get_values()
             self._stop.wait(self._interval)
 

@@ -28,19 +28,19 @@ Implements
 
 
 @author: Marc SCHNEIDER <marc@mirelsol.org>
-@copyright: (C) 2007-2012 Domogik project
+@copyright: (C) 2007-2019 Domogik project
 @license: GPL(v3)
 @organization: Domogik
 """
 
 from subprocess import Popen, PIPE
 import os
-import sys
 import re
-from netifaces import interfaces, ifaddresses, AF_INET, AF_INET6
-from domogik.common.configloader import Loader, CONFIG_FILE
+from netifaces import interfaces, ifaddresses, AF_INET
+from domogik.common.configloader import Loader
 import datetime
 import time
+import threading
 import unicodedata
 from domogikmq.reqrep.client import MQSyncReq
 from domogikmq.message import MQMessage
@@ -149,16 +149,16 @@ def ucode2(my_string):
     if my_string is None:
         return None
     # already in unicode, return unicode
-    elif isinstance(my_string, unicode):
+    elif isinstance(my_string, bytes):
         return my_string
 
     # str
     elif isinstance(my_string, str):
-        return unicode(my_string, "utf-8")
+        return my_string.encode('utf8')
 
     # other type (int, float, boolean, ...)
     else:
-        return unicode(str(my_string), "utf-8")
+        return str(my_string).encode('utf8')
 
 def parse_client_id(client_id):
     tmp = client_id.split(".")
@@ -227,8 +227,8 @@ def is_already_launched(log, type, id, manager=True):
     for line in subp.stdout:
         is_launched = True
         if log:
-            log.info("Process found : {0}".format(line.rstrip("\n")))
-        the_pid = REGEXP_PS_SEPARATOR.split(line)[1]
+            log.info("Process found : {0}".format(line.rstrip(b"\n")))
+        the_pid = REGEXP_PS_SEPARATOR.split(line.decode("utf-8"))[1]
         pid_list.append(the_pid)
         #pid_list.append(line.rstrip("\n").split(" ")[0])
     subp.wait()
@@ -419,6 +419,84 @@ def build_deviceType_from_packageJson(log, zmq, dev_type_id, client_id):
                 result['xpl_stats'][xstatn].append(param)
     log.debug(u"build_deviceType_from_packageJson > result = '{0}'".format(result))
     return (result, reason, status)
+
+class Timer():
+    """
+    Timer will call a callback function each n seconds
+    """
+
+    def __init__(self, time, cb, plugin):
+        """
+        Constructor : create the internal timer
+        @param time : time of loop in second
+        @param cb : callback function which will be call eact 'time' seconds
+        @param plugin : The plugin who create timer
+        """
+        self._stop = threading.Event()
+        self._timer = self.__InternalTimer(time, cb, self._stop, plugin.log)
+        self._plugin = plugin
+        self.log = plugin.log
+        plugin.register_timer(self)
+        plugin.register_thread(self._timer)
+        self.log.debug(u"New timer created : %s " % self)
+
+    def start(self):
+        """
+        Start the timer
+        """
+        self._timer.start()
+
+    def get_stop(self):
+        """ Returns the threading.Event instance used to stop the Timer
+        """
+        return self._stop
+
+    def get_timer(self):
+        """
+        Waits for the internal thread to finish
+        """
+        return self._timer
+
+    def __del__(self):
+        self.log.debug(u"__del__ TimerManager")
+        self.stop()
+
+    def stop(self):
+        """
+        Stop the timer
+        """
+        self.log.debug(u"Timer : stop, try to join() internal thread")
+        self._stop.set()
+        self._timer.join()
+        self.log.debug(u"Timer : stop, internal thread joined, unregister it")
+        self._plugin.unregister_timer(self._timer)
+
+    class __InternalTimer(threading.Thread):
+        '''
+        Internal timer class
+        '''
+        def __init__(self, time, cb, stop, log):
+            '''
+            @param time : interval between each callback call
+            @param cb : callback function
+            @param stop : Event to check for stop thread
+            '''
+            threading.Thread.__init__(self)
+            self._time = time
+            self._cb = cb
+            self._stopper = stop # avoid confusion from Thread.Event()
+            self.name = "internal-timer"
+            self.log = log
+
+        def run(self):
+            '''
+            Call the callback every X seconds
+            '''
+            # wait first time set
+            self._stopper.wait(self._time)
+            while not self._stopper.is_set():
+                self._cb()
+                self._stopper.wait(self._time)
 
 if __name__ == "__main__":
     print(get_seconds_since_midnight())

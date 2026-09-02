@@ -24,10 +24,6 @@ along with Domogik. If not, see U{http://www.gnu.org/licenses}.
 @license: GPL(v3)
 @organization: Domogik
 """
-try:
-    from exceptions import IndexError, NotImplementedError, AttributeError
-except:
-    pass
 
 class AbstractTest:
     """ This class provides base methods for the scenario tests

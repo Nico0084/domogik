@@ -36,17 +36,11 @@ Implements
 import pkgutil
 import importlib
 import inspect
-import uuid
 import json
 import domogik.scenario.tests as s_t
-import domogik.scenario.parameters as s_p
 import domogik.scenario.actions as s_a
 from domogik.common.database import DbHelper
 from domogik.scenario.scenario import ScenarioInstance
-try:
-    from exceptions import KeyError
-except:
-    pass
 import traceback
 import time
 
@@ -197,7 +191,7 @@ class ScenarioManager(object):
             self.log.error(msg)
             return {'status': 'ERROR', 'msg': msg}
 
-    def create_scenario(self, name, json_input, cid=0, dis=False, desc=None, behavior="wait", state=False, update=False):
+    def create_scenario(self, name, json_input, cid=0, dis=False, desc=None, behav="wait", state=False, update=False):
         """ Create a Scenario from the provided json.
         @param name : A name for the condition instance
         @param json_input : JSON representation of the condition
@@ -224,15 +218,15 @@ class ScenarioManager(object):
         # db storage
         if int(ocid) == 0:
             with self._db.session_scope():
-                scen = self._db.add_scenario(name, json_input, dis, desc, behavior, False)
+                scen = self._db.add_scenario(name, json_input, dis, desc, behav, False)
                 cid = scen.id
         elif update:
             with self._db.session_scope():
-                self._db.update_scenario(cid, name, json_input, dis, desc, behavior)
+                self._db.update_scenario(cid, name, json_input, dis, desc, behav)
 
         # create the condition itself
         try:
-            scen = ScenarioInstance(self.log, cid, name, payload, dis, state, behavior, self._db)
+            scen = ScenarioInstance(self.log, cid, name, payload, dis, state, behav, self._db)
             self._instances[cid] = {'name': name, 'json': payload, 'instance': scen, 'disabled': dis }
             self.log.debug(u"Create scenario instance {0} with payload {1}".format(name, payload))
             self._instances[cid]['instance'].eval_condition()

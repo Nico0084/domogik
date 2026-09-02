@@ -12,12 +12,12 @@ print(db.get_db_name())
 
 with db.session_scope():
     print("================= Timeline device =======================")
-    data = db.get_timeline(device_id=2)
+    data = db.get_timeline(device_id=1)
     print(data)
     for elt in data:
         print(elt)
     print("================= Timeline client =======================")
-    data = db.get_timeline(client_id="7")
+    data = db.get_timeline(client_id="6")
     print(data)
     for elt in data:
         print(elt)

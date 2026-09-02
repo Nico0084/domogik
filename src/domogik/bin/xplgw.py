@@ -589,7 +589,7 @@ class XplManager(XplPlugin):
             self._stop = stop
 
         def run(self):
-            while not self._stop.isSet():
+            while not self._stop.is_set():
                 # remove old pkts
                 self._lock_p.acquire()
                 for pkt in self._pkt.keys():
@@ -745,7 +745,7 @@ class XplManager(XplPlugin):
                 return False
 
         def run(self):
-            while not self._stop.isSet():
+            while not self._stop.is_set():
                 try:
                     item = self._queue.get(timeout=1)
                     #self._log.debug(u"Getting item from the sensor queue, current length = {0}".format(self._queue.qsize()))
@@ -858,7 +858,7 @@ class XplManager(XplPlugin):
                 self._log.debug(u"Devices and sensors reloaded for _SensorStoreThread")
 
         def run(self):
-            while not self._stop.isSet():
+            while not self._stop.is_set():
                 try:
                     store = True
                     item = self._queue.get(timeout=1)

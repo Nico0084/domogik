@@ -8,7 +8,7 @@ import sys
 import getpass
 # end debug
 import platform
-import ConfigParser
+import configparser
 import argparse
 import shutil
 import errno
@@ -80,9 +80,9 @@ class DbInstall():
         mysql_script+= "grant all privileges on {0}.* to '{1}'@'%';\n".format(self._db.get_db_name(), self._db.get_db_user())
         mysql_script+= "flush privileges;\n".format(self._db.get_db_name(), self._db.get_db_user())
         sh_script = "mysql -p -u root << TXT\n"+mysql_script+"TXT\n"
-        print("---------------------------------------------------")
+        print(u"---------------------------------------------------")
         print(sh_script)
-        print("---------------------------------------------------")
+        print(u"---------------------------------------------------")
 
         ok("Please entrer {0} root password".format(self._db.get_db_type()))
         res = os.system(sh_script)
@@ -180,10 +180,10 @@ class DbInstall():
             warning("Can't backup your database, only mysql is supported (you have : {0})".format(self._db.get_db_type()))
             return
         if ask_confirm:
-            answer = raw_input("Do you want to backup your database? [Y/n] ")
+            answer = input("Do you want to backup your database? [Y/n] ")
             if answer == 'n':
                 return
-            answer = raw_input("Backup file? [{0}] ".format(self.db_backup_file))
+            answer = input("Backup file? [{0}] ".format(self.db_backup_file))
             if answer != '':
                 bfile = answer
             else:
